@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>创作中心 - 表达空间</title>
+  <link rel="stylesheet" href="../assets/css/theme.css">
+  <link rel="stylesheet" href="../assets/css/common.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="topbar-inner">
+      <a href="../index.html" class="brand">表达空间<small>ExpressSpace</small></a>
+      <nav class="nav" data-nav></nav>
+    </div>
+  </header>
+
+  <main class="container">
+    <div class="toolbar mt-24">
+      <h2>创作中心</h2>
+      <a href="works.html" class="btn btn-ghost btn-sm">📂 我的作品</a>
+    </div>
+    <p class="text-soft mb-24" style="font-size:14px">有些话知道该说，却不知道怎么开口。这里帮你把话组织好——真诚的那种。</p>
+
+    <div class="grid-3">
+      <div class="tool-card" onclick="location.href='template.html'">
+        <div class="emoji">📝</div>
+        <h3>表达模板</h3>
+        <p>感谢、道歉、安慰、求助、拒绝、表白——按场景填空，生成真诚成稿。</p>
+      </div>
+      <div class="tool-card" onclick="location.href='haiku.html'">
+        <div class="emoji">🍃</div>
+        <h3>三行诗</h3>
+        <p>用一个意象、一种心情、一句收束，把复杂的心事说成三行。</p>
+      </div>
+      <div class="tool-card" onclick="location.href='letter.html'">
+        <div class="emoji">💌</div>
+        <h3>写信助手</h3>
+        <p>想对某人说点心里话？输入关系和想说的要点，生成信件草稿。</p>
+      </div>
+    </div>
+
+    <div class="disclaimer mt-24">
+      <strong>小提示：</strong>创作是帮助你组织语言，不是替你撒谎。请把成稿读一遍，改成真正属于你的话，它会更有力量。
+    </div>
+  </main>
+
+  <script src="../assets/js/config.js"></script>
+  <script src="../assets/js/api.js"></script>
+  <script src="../assets/js/auth.js"></script>
+</body>
+</html>

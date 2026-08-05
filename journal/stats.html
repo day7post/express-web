@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>成长曲线 - 表达空间</title>
+  <link rel="stylesheet" href="../assets/css/theme.css">
+  <link rel="stylesheet" href="../assets/css/common.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="topbar-inner">
+      <a href="../index.html" class="brand">表达空间<small>ExpressSpace</small></a>
+      <nav class="nav" data-nav></nav>
+    </div>
+  </header>
+
+  <main class="container-narrow">
+    <div class="toolbar mt-24">
+      <h2>成长曲线</h2>
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-ghost btn-sm" id="range-week" onclick="loadStats('week')">按周</button>
+        <button class="btn btn-ghost btn-sm" id="range-month" onclick="loadStats('month')">按月</button>
+      </div>
+    </div>
+
+    <div id="alert"></div>
+    <div class="card">
+      <h3 class="card-title">心情变化趋势</h3>
+      <div id="trend" class="loading">加载中…</div>
+    </div>
+
+    <div class="card">
+      <h3 class="card-title">情绪占比</h3>
+      <div id="distribution" class="loading">加载中…</div>
+    </div>
+  </main>
+
+  <script src="../assets/js/config.js"></script>
+  <script src="../assets/js/api.js"></script>
+  <script src="../assets/js/auth.js"></script>
+  <script>
+    if (!requireLogin()) { /* 已跳转 */ }
+
+    async function loadStats(range) {
+      document.getElementById("range-week").classList.toggle("btn-soft", range === "week");
+      document.getElementById("range-month").classList.toggle("btn-soft", range === "month");
+      document.getElementById("trend").innerHTML = '<div class="loading">加载中…</div>';
+      document.getElementById("distribution").innerHTML = '<div class="loading">加载中…</div>';
+
+      try {
+        const data = await Api.get(`/journals/stats?range=${range}`);
+
+        // 趋势条形图（SVG 折线）
+        const trend = data.mood_trend;
+        const trendEl = document.getElementById("trend");
+        if (!trend.length) {
+          trendEl.innerHTML = `<div class="empty"><div class="emoji">📈</div><p>数据还太少，多记录几天就能看到曲线啦</p></div>`;
+        } else {
+          const W = 560, H = 200, PAD = 30;
+          const maxY = 5, minY = 1;
+          const n = trend.length;
+          const stepX = (W - PAD * 2) / Math.max(n - 1, 1);
+          const yOf = v => H - PAD - ((v - minY) / (maxY - minY)) * (H - PAD * 2);
+          const points = trend.map((t, i) => `${(PAD + i * stepX).toFixed(1)},${yOf(t.avg_mood).toFixed(1)}`);
+          // 面积填充
+          const area = `${PAD},${H - PAD} ${points.join(" ")} ${W - PAD},${H - PAD}`;
+          const labels = trend.map((t, i) =>
+            `<text x="${(PAD + i * stepX).toFixed(1)}" y="${H - 8}" font-size="10" fill="#9aa8a0" text-anchor="middle">${t.period.slice(-2)}</text>`
+          ).join("");
+          trendEl.innerHTML = `
+            <svg viewBox="0 0 ${W} ${H}" width="100%" style="max-width:560px">
+              ${[1,2,3,4,5].map(l => `<line x1="${PAD}" y1="${yOf(l)}" x2="${W-PAD}" y2="${yOf(l)}" stroke="#e5ded2" stroke-width="1"/>
+                <text x="6" y="${yOf(l)+3}" font-size="10" fill="#9aa8a0">${moodEmoji(l)}</text>`).join("")}
+              <polygon points="${area}" fill="#7fb5a0" opacity="0.12"/>
+              <polyline points="${points.join(" ")}" fill="none" stroke="#5c9480" stroke-width="2.5" stroke-linejoin="round"/>
+              ${trend.map((t, i) => `<circle cx="${(PAD + i * stepX).toFixed(1)}" cy="${yOf(t.avg_mood).toFixed(1)}" r="4" fill="#5c9480"/>`).join("")}
+              ${labels}
+            </svg>`;
+        }
+
+        // 情绪占比
+        const dist = data.mood_distribution;
+        const distEl = document.getElementById("distribution");
+        const entries = Object.entries(dist).sort((a, b) => b[1] - a[1]);
+        if (!entries.length) {
+          distEl.innerHTML = `<p class="text-faint">还没有情绪标签数据</p>`;
+        } else {
+          const total = entries.reduce((s, [, v]) => s + v, 0);
+          distEl.innerHTML = entries.map(([tag, count]) => {
+            const pct = Math.round(count / total * 100);
+            return `<div style="margin-bottom:10px">
+              <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:4px">
+                <span>${tag}</span><span class="text-faint">${count} 次 · ${pct}%</span>
+              </div>
+              <div style="height:8px;background:var(--surface-soft);border-radius:4px">
+                <div style="height:100%;width:${pct}%;background:var(--primary);border-radius:4px"></div>
+              </div>
+            </div>`;
+          }).join("");
+        }
+      } catch (e) {
+        showError(document.getElementById("alert"), e.detail);
+      }
+    }
+
+    loadStats("month");
+  </script>
+</body>
+</html>

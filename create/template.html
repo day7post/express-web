@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>表达模板 - 表达空间</title>
+  <link rel="stylesheet" href="../assets/css/theme.css">
+  <link rel="stylesheet" href="../assets/css/common.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="topbar-inner">
+      <a href="../index.html" class="brand">表达空间<small>ExpressSpace</small></a>
+      <nav class="nav" data-nav></nav>
+    </div>
+  </header>
+
+  <main class="container-narrow">
+    <div class="toolbar mt-24">
+      <h2>表达模板</h2>
+      <a href="hub.html" class="btn btn-ghost btn-sm">← 创作中心</a>
+    </div>
+
+    <div id="alert"></div>
+
+    <!-- 分类选择 -->
+    <div class="category-tabs" id="category-tabs"></div>
+
+    <!-- 模板列表 -->
+    <div id="template-list" class="loading">加载中…</div>
+
+    <!-- 填写区 -->
+    <div class="card" id="fill-area" style="display:none">
+      <h3 class="card-title" id="template-title"></h3>
+      <div id="fill-fields"></div>
+      <button class="btn btn-block" onclick="generate()">生成成稿</button>
+    </div>
+
+    <!-- 结果区 -->
+    <div class="card" id="result-area" style="display:none">
+      <h3 class="card-title">你的成稿</h3>
+      <div class="result-box" id="result-box"></div>
+      <div class="mt-16" style="display:flex;gap:10px">
+        <button class="btn" onclick="copyResult()">复制</button>
+        <button class="btn btn-ghost" onclick="saveResult()">保存到我的作品</button>
+        <button class="btn btn-ghost" onclick="regenerate()">重新填写</button>
+      </div>
+    </div>
+  </main>
+
+  <script src="../assets/js/config.js"></script>
+  <script src="../assets/js/api.js"></script>
+  <script src="../assets/js/auth.js"></script>
+  <script>
+    const CATEGORIES = ["全部", "感谢", "道歉", "安慰", "求助", "拒绝", "表白"];
+    let allTemplates = [];
+    let currentTemplate = null;
+    let generatedText = "";
+
+    function renderTabs() {
+      document.getElementById("category-tabs").innerHTML = CATEGORIES.map((c, i) =>
+        `<span class="tab ${i === 0 ? "active" : ""}" data-cat="${c}" onclick="selectCategory('${c}', this)">${c}</span>`
+      ).join("");
+    }
+
+    async function selectCategory(cat, el) {
+      document.querySelectorAll(".category-tabs .tab").forEach(t => t.classList.remove("active"));
+      if (el) el.classList.add("active");
+      document.getElementById("result-area").style.display = "none";
+      document.getElementById("fill-area").style.display = "none";
+      const listEl = document.getElementById("template-list");
+      listEl.innerHTML = '<div class="loading">加载中…</div>';
+      try {
+        const data = await Api.get(cat === "全部" ? "/templates" : `/templates?category=${encodeURIComponent(cat)}`);
+        allTemplates = data.items;
+        renderList();
+      } catch (e) {
+        listEl.innerHTML = `<div class="empty"><p>${e.detail || "加载失败"}</p></div>`;
+      }
+    }
+
+    function renderList() {
+      const listEl = document.getElementById("template-list");
+      if (!allTemplates.length) {
+        listEl.innerHTML = `<div class="empty"><p>该分类暂无模板</p></div>`;
+        return;
+      }
+      listEl.innerHTML = allTemplates.map(t => `
+        <div class="post-card" style="cursor:pointer" onclick="openTemplate('${t.id}')">
+          <div class="item-title">${t.title}</div>
+          <div class="item-meta">${t.category} · 点击开始</div>
+        </div>`).join("");
+    }
+
+    async function openTemplate(id) {
+      try {
+        currentTemplate = await Api.get(`/templates/${id}`);
+        document.getElementById("template-title").textContent = currentTemplate.title;
+        document.getElementById("fill-fields").innerHTML = currentTemplate.structure.map(f => `
+          <div class="field">
+            <label>${f.name}${f.required ? " *" : ""}</label>
+            <input type="text" id="f-${f.key}" placeholder="${f.placeholder || ""}">
+          </div>`).join("");
+        document.getElementById("fill-area").style.display = "";
+        document.getElementById("result-area").style.display = "none";
+        document.getElementById("fill-area").scrollIntoView({ behavior: "smooth" });
+      } catch (e) { showError(document.getElementById("alert"), e.detail); }
+    }
+
+    function fillResult() {
+      let text = currentTemplate.body_template;
+      currentTemplate.structure.forEach(f => {
+        const val = (document.getElementById(`f-${f.key}`) || {}).value || "";
+        text = text.split(`{${f.key}}`).join(val || f.name);
+      });
+      // 清理残留占位符
+      text = text.replace(/\{[^}]+\}/g, "").replace(/\n{3,}/g, "\n\n");
+      return text.trim();
+    }
+
+    function generate() {
+      generatedText = fillResult();
+      document.getElementById("result-box").textContent = generatedText;
+      document.getElementById("result-area").style.display = "";
+      document.getElementById("result-area").scrollIntoView({ behavior: "smooth" });
+    }
+
+    function regenerate() {
+      document.getElementById("result-area").style.display = "none";
+      document.getElementById("fill-area").scrollIntoView({ behavior: "smooth" });
+    }
+
+    function copyResult() {
+      navigator.clipboard.writeText(generatedText).then(() => {
+        alert("已复制，去粘贴给想给的人吧 💌");
+      }).catch(() => alert("复制失败，请手动选择复制"));
+    }
+
+    async function saveResult() {
+      if (!Api.isLoggedIn()) { location.href = "../auth.html"; return; }
+      try {
+        await Api.post("/creations", {
+          tool_type: "template",
+          template_id: currentTemplate.id,
+          title: currentTemplate.title,
+          content: generatedText,
+          raw_input: {},
+        });
+        alert("已保存到我的作品 📂");
+      } catch (e) { showError(document.getElementById("alert"), e.detail); }
+    }
+
+    renderTabs();
+    selectCategory("全部", null);
+  </script>
+</body>
+</html>

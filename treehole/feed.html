@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>树洞 - 表达空间</title>
+  <link rel="stylesheet" href="../assets/css/theme.css">
+  <link rel="stylesheet" href="../assets/css/common.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="topbar-inner">
+      <a href="../index.html" class="brand">表达空间<small>ExpressSpace</small></a>
+      <nav class="nav" data-nav></nav>
+    </div>
+  </header>
+
+  <main class="container-narrow">
+    <div class="toolbar mt-24">
+      <h2 id="feed-title">树洞</h2>
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-ghost btn-sm" id="btn-feed" onclick="location.href='feed.html'">广场</button>
+        <button class="btn btn-ghost btn-sm" id="btn-mine" onclick="location.href='feed.html?mine=1'">我的树洞</button>
+        <a href="new.html" class="btn btn-sm">🌊 说点什么</a>
+      </div>
+    </div>
+    <p class="text-faint mb-16" style="font-size:13px">这里是匿名的。把说不出口的话放下，也会有人认真读完、温柔回应。</p>
+
+    <div id="alert"></div>
+    <div id="list" class="loading">加载中…</div>
+  </main>
+
+  <script src="../assets/js/config.js"></script>
+  <script src="../assets/js/api.js"></script>
+  <script src="../assets/js/auth.js"></script>
+  <script>
+    const isMine = new URLSearchParams(location.search).get("mine") === "1";
+    if (isMine) {
+      if (!requireLogin()) { /* 已跳转 */ }
+      document.getElementById("feed-title").textContent = "我的树洞";
+      document.getElementById("btn-mine").classList.add("btn-soft");
+    } else {
+      document.getElementById("btn-feed").classList.add("btn-soft");
+    }
+
+    function tagChip(tag) {
+      const colors = { "倾诉": "green", "求助": "", "分享": "green" };
+      return tag ? `<span class="tag-chip ${colors[tag] || ""}">${tag}</span>` : "";
+    }
+
+    async function load() {
+      const listEl = document.getElementById("list");
+      try {
+        const data = isMine ? await Api.get("/treehole/mine") : await Api.get("/treehole/posts");
+        const items = data.items;
+        if (!items.length) {
+          listEl.innerHTML = `<div class="empty">
+            <div class="emoji">🌊</div>
+            <p>${isMine ? "你还没有发过树洞" : "树洞还空着，来做第一个说话的人吧"}</p>
+            ${Api.isLoggedIn() ? '<a href="new.html" class="btn mt-16">说点什么</a>' : '<a href="../auth.html" class="btn mt-16">登录后倾诉</a>'}
+          </div>`;
+          return;
+        }
+        listEl.innerHTML = items.map(p => `
+          <div class="post-card">
+            <div class="post-head">
+              <span class="post-name">${p.anonymous_name}</span>
+              <span class="post-time">${relativeTime(p.created_at)}</span>
+            </div>
+            ${tagChip(p.tag)}${p.mood_level ? `<span style="font-size:14px">${moodEmoji(p.mood_level)}</span>` : ""}
+            <div class="post-content mt-8">${escapeHtml(p.content)}</div>
+            <div class="post-foot">
+              <a href="post.html?id=${p.id}" style="font-size:13px">💬 ${p.reply_count} 条回应</a>
+              <span class="like" onclick="likePost('${p.id}', this)">❤️ ${p.like_count}</span>
+              ${isMine ? `<a href="#" onclick="deletePost('${p.id}');return false;" style="color:var(--danger)">删除</a>` : ""}
+            </div>
+          </div>`).join("");
+      } catch (e) {
+        if (e.status === 401) return;
+        listEl.innerHTML = `<div class="empty"><p>${e.detail || "加载失败"}</p></div>`;
+      }
+    }
+
+    function escapeHtml(s) {
+      return String(s).replace(/[&<>"']/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c]));
+    }
+
+    async function likePost(id, el) {
+      try {
+        const res = await Api.post(`/treehole/posts/${id}/like`);
+        el.textContent = `❤️ ${res.like_count}`;
+        el.classList.add("liked");
+      } catch (e) { alert(e.detail || "操作失败"); }
+    }
+
+    async function deletePost(id) {
+      if (!confirm("确定删除这条树洞吗？")) return;
+      try {
+        await Api.del(`/treehole/posts/${id}`);
+        load();
+      } catch (e) { alert(e.detail || "删除失败"); }
+    }
+
+    load();
+  </script>
+</body>
+</html>

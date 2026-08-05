@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>我的作品 - 表达空间</title>
+  <link rel="stylesheet" href="../assets/css/theme.css">
+  <link rel="stylesheet" href="../assets/css/common.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="topbar-inner">
+      <a href="../index.html" class="brand">表达空间<small>ExpressSpace</small></a>
+      <nav class="nav" data-nav></nav>
+    </div>
+  </header>
+
+  <main class="container-narrow">
+    <div class="toolbar mt-24">
+      <h2>我的作品</h2>
+      <a href="hub.html" class="btn btn-ghost btn-sm">← 创作中心</a>
+    </div>
+
+    <div id="alert"></div>
+    <div id="list" class="loading">加载中…</div>
+  </main>
+
+  <script src="../assets/js/config.js"></script>
+  <script src="../assets/js/api.js"></script>
+  <script src="../assets/js/auth.js"></script>
+  <script>
+    if (!requireLogin()) { /* 已跳转 */ }
+
+    const TYPE_NAMES = { template: "📝 模板", haiku: "🍃 三行诗", letter: "💌 信件" };
+
+    async function load() {
+      const listEl = document.getElementById("list");
+      try {
+        const data = await Api.get("/creations");
+        const items = data.items;
+        if (!items.length) {
+          listEl.innerHTML = `<div class="empty">
+            <div class="emoji">📂</div>
+            <p>还没有保存过作品</p>
+            <a href="hub.html" class="btn mt-16">去创作</a>
+          </div>`;
+          return;
+        }
+        listEl.innerHTML = items.map(c => `
+          <div class="post-card">
+            <div class="post-head">
+              <span class="post-name">${TYPE_NAMES[c.tool_type] || c.tool_type} · ${c.title || "未命名"}</span>
+              <span class="post-time">${relativeTime(c.updated_at)}</span>
+            </div>
+            <div class="post-content" style="font-size:13px">${escapeHtml(c.content.slice(0, 150))}${c.content.length > 150 ? "…" : ""}</div>
+            <div class="post-foot">
+              <a href="#" onclick="viewWork('${c.id}');return false;">查看全文</a>
+              <a href="#" onclick="deleteWork('${c.id}');return false;" style="color:var(--danger)">删除</a>
+            </div>
+          </div>`).join("");
+      } catch (e) {
+        listEl.innerHTML = `<div class="empty"><p>${e.detail || "加载失败"}</p></div>`;
+      }
+    }
+
+    function escapeHtml(s) {
+      return String(s).replace(/[&<>"']/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c]));
+    }
+
+    async function viewWork(id) {
+      // 从已加载列表找内容展示（避免额外接口）
+      const items = (await Api.get("/creations")).items;
+      const w = items.find(i => i.id === id);
+      if (w) {
+        const win = window.open("", "_blank");
+        win.document.write(`<pre style="font-family:inherit;font-size:15px;line-height:2;padding:24px;max-width:640px;margin:auto;white-space:pre-wrap">${escapeHtml(w.content)}</pre>`);
+      }
+    }
+
+    async function deleteWork(id) {
+      if (!confirm("确定删除这个作品吗？")) return;
+      try {
+        await Api.del(`/creations/${id}`);
+        load();
+      } catch (e) { alert(e.detail || "删除失败"); }
+    }
+
+    load();
+  </script>
+</body>
+</html>

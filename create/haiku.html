@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>三行诗 - 表达空间</title>
+  <link rel="stylesheet" href="../assets/css/theme.css">
+  <link rel="stylesheet" href="../assets/css/common.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="topbar-inner">
+      <a href="../index.html" class="brand">表达空间<small>ExpressSpace</small></a>
+      <nav class="nav" data-nav></nav>
+    </div>
+  </header>
+
+  <main class="container-narrow">
+    <div class="toolbar mt-24">
+      <h2>三行诗</h2>
+      <a href="hub.html" class="btn btn-ghost btn-sm">← 创作中心</a>
+    </div>
+    <p class="text-soft mb-16" style="font-size:14px">复杂的心事，三行就够了。第一行写意象，第二行写心情，第三行收束——把此刻的自己留在纸上。</p>
+
+    <div id="alert"></div>
+
+    <div class="card">
+      <div class="field">
+        <label>写一个意象（一个具体的画面）</label>
+        <input type="text" id="img" placeholder="例如：窗台上的旧书、傍晚的路灯">
+      </div>
+      <div class="field">
+        <label>此刻的心情（一个词）</label>
+        <input type="text" id="mood" placeholder="例如：想念、释然、慌张">
+      </div>
+      <div class="field">
+        <label>想对谁说 / 对什么说</label>
+        <input type="text" id="to" placeholder="例如：远方的你、过去的自己">
+      </div>
+      <button class="btn btn-block" onclick="compose()">写成三行</button>
+    </div>
+
+    <div class="card" id="result-area" style="display:none">
+      <h3 class="card-title">你的三行诗</h3>
+      <div class="result-box" id="result-box" style="text-align:center;font-size:18px"></div>
+      <div class="mt-16" style="display:flex;gap:10px">
+        <button class="btn" onclick="copyHaiku()">复制</button>
+        <button class="btn btn-ghost" onclick="saveHaiku()">保存到我的作品</button>
+        <button class="btn btn-ghost" onclick="location.reload()">再写一首</button>
+      </div>
+    </div>
+  </main>
+
+  <script src="../assets/js/config.js"></script>
+  <script src="../assets/js/api.js"></script>
+  <script src="../assets/js/auth.js"></script>
+  <script>
+    let haikuText = "";
+
+    const IMAGE_STARTERS = ["黄昏把", "风把", "路灯把", "雨把", "光把", "影子把", "落叶把", "月亮把"];
+    const VERB_ENDINGS = ["轻轻放在", "慢慢收进", "悄悄说给", "细细写在", "静静揉进", "默默叠成"];
+
+    function compose() {
+      const img = document.getElementById("img").value.trim() || "窗台的花";
+      const mood = document.getElementById("mood").value.trim() || "想念";
+      const to = document.getElementById("to").value.trim() || "你";
+
+      const starter = IMAGE_STARTERS[Math.floor(Math.random() * IMAGE_STARTERS.length)];
+      const ending = VERB_ENDINGS[Math.floor(Math.random() * VERB_ENDINGS.length)];
+
+      const lines = [
+        `${starter}${img}，${ending}${to}的肩头`,
+        `那些没说出口的${mood}，都化了`,
+        `风一吹，就成了今晚的月亮`,
+      ];
+
+      haikuText = lines.join("\n");
+      document.getElementById("result-box").textContent = haikuText;
+      document.getElementById("result-area").style.display = "";
+      document.getElementById("result-area").scrollIntoView({ behavior: "smooth" });
+    }
+
+    function copyHaiku() {
+      navigator.clipboard.writeText(haikuText).then(() => alert("已复制 🍃"));
+    }
+
+    async function saveHaiku() {
+      if (!Api.isLoggedIn()) { location.href = "../auth.html"; return; }
+      try {
+        await Api.post("/creations", {
+          tool_type: "haiku",
+          title: "三行诗",
+          content: haikuText,
+          raw_input: {},
+        });
+        alert("已保存到我的作品 📂");
+      } catch (e) { showError(document.getElementById("alert"), e.detail); }
+    }
+  </script>
+</body>
+</html>

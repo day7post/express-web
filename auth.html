@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>登录 / 注册 - 表达空间</title>
+  <link rel="stylesheet" href="assets/css/theme.css">
+  <link rel="stylesheet" href="assets/css/common.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="topbar-inner">
+      <a href="index.html" class="brand">表达空间<small>ExpressSpace</small></a>
+      <nav class="nav"><a href="index.html">返回首页</a></nav>
+    </div>
+  </header>
+
+  <main class="auth-wrap">
+    <h1 class="text-center mb-24" style="font-size:24px">欢迎回来</h1>
+
+    <div class="card">
+      <div class="auth-tabs">
+        <div class="tab active" data-tab="login" onclick="switchTab('login')">登录</div>
+        <div class="tab" data-tab="register" onclick="switchTab('register')">注册</div>
+      </div>
+
+      <div id="alert"></div>
+
+      <!-- 登录表单 -->
+      <form id="login-form" onsubmit="handleLogin(event)">
+        <div class="field">
+          <label>昵称</label>
+          <input type="text" id="login-nickname" placeholder="你的昵称" required>
+        </div>
+        <div class="field">
+          <label>密码</label>
+          <input type="password" id="login-password" placeholder="密码" required>
+        </div>
+        <button type="submit" class="btn btn-block">登 录</button>
+      </form>
+
+      <!-- 注册表单 -->
+      <form id="register-form" style="display:none" onsubmit="handleRegister(event)">
+        <div class="field">
+          <label>昵称（2-20 个字符）</label>
+          <input type="text" id="reg-nickname" minlength="2" maxlength="20" placeholder="想让大家怎么称呼你" required>
+        </div>
+        <div class="field">
+          <label>密码（至少 6 位）</label>
+          <input type="password" id="reg-password" minlength="6" placeholder="设置密码" required>
+        </div>
+        <div class="field">
+          <label class="checkbox-line">
+            <input type="checkbox" id="reg-agree" required>
+            <span>我已阅读并同意<a href="privacy.html" target="_blank">《隐私政策》</a>，理解本平台是表达陪伴工具而非医疗或心理治疗服务，紧急情况会联系专业帮助。</span>
+          </label>
+        </div>
+        <button type="submit" class="btn btn-block">注 册</button>
+      </form>
+    </div>
+
+    <p class="text-center text-faint mt-16" style="font-size:13px">仅需昵称和密码，无需手机号邮箱</p>
+  </main>
+
+  <script src="assets/js/config.js"></script>
+  <script src="assets/js/api.js"></script>
+  <script src="assets/js/auth.js"></script>
+  <script>
+    function switchTab(tab) {
+      document.querySelectorAll(".auth-tabs .tab").forEach(t => t.classList.toggle("active", t.dataset.tab === tab));
+      document.getElementById("login-form").style.display = tab === "login" ? "" : "none";
+      document.getElementById("register-form").style.display = tab === "register" ? "" : "none";
+      clearAlert(document.getElementById("alert"));
+    }
+
+    function afterAuth(data) {
+      Api.setAuth(data.token, data.user);
+      const next = new URLSearchParams(location.search).get("next");
+      location.href = next || "index.html";
+    }
+
+    async function handleLogin(e) {
+      e.preventDefault();
+      clearAlert(document.getElementById("alert"));
+      try {
+        const data = await Api.post("/auth/login", {
+          nickname: document.getElementById("login-nickname").value.trim(),
+          password: document.getElementById("login-password").value,
+        });
+        afterAuth(data);
+      } catch (err) {
+        showError(document.getElementById("alert"), err.detail);
+      }
+    }
+
+    async function handleRegister(e) {
+      e.preventDefault();
+      clearAlert(document.getElementById("alert"));
+      if (!document.getElementById("reg-agree").checked) {
+        showError(document.getElementById("alert"), "请先阅读并同意隐私政策");
+        return;
+      }
+      try {
+        const data = await Api.post("/auth/register", {
+          nickname: document.getElementById("reg-nickname").value.trim(),
+          password: document.getElementById("reg-password").value,
+        });
+        afterAuth(data);
+      } catch (err) {
+        showError(document.getElementById("alert"), err.detail);
+      }
+    }
+
+    // 已登录则直接跳首页
+    if (Api.isLoggedIn()) location.href = "index.html";
+  </script>
+</body>
+</html>

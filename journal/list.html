@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>我的日记 - 表达空间</title>
+  <link rel="stylesheet" href="../assets/css/theme.css">
+  <link rel="stylesheet" href="../assets/css/common.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="topbar-inner">
+      <a href="../index.html" class="brand">表达空间<small>ExpressSpace</small></a>
+      <nav class="nav" data-nav></nav>
+    </div>
+  </header>
+
+  <main class="container">
+    <div class="toolbar mt-24">
+      <h2>我的日记</h2>
+      <div style="display:flex;gap:8px">
+        <a href="calendar.html" class="btn btn-ghost btn-sm">心情日历</a>
+        <a href="stats.html" class="btn btn-ghost btn-sm">成长曲线</a>
+        <a href="edit.html" class="btn btn-sm">✏️ 写日记</a>
+      </div>
+    </div>
+
+    <div id="alert"></div>
+    <div id="list" class="loading">加载中…</div>
+  </main>
+
+  <script src="../assets/js/config.js"></script>
+  <script src="../assets/js/api.js"></script>
+  <script src="../assets/js/auth.js"></script>
+  <script>
+    if (!requireLogin()) { /* 已跳转 */ }
+
+    async function load() {
+      const listEl = document.getElementById("list");
+      try {
+        const data = await Api.get("/journals?limit=100");
+        const items = data.items;
+        if (!items.length) {
+          listEl.innerHTML = `<div class="empty">
+            <div class="emoji">📔</div>
+            <p>还没有日记</p>
+            <p class="text-soft mt-8">写下第一篇吧，哪怕只有一句话</p>
+            <a href="edit.html" class="btn mt-16">写第一篇日记</a>
+          </div>`;
+          return;
+        }
+        listEl.innerHTML = `<ul class="item-list">` + items.map(j => `
+          <li>
+            <div class="item-title">
+              <a href="edit.html?id=${j.id}">${j.title || "无题日记"}</a>
+              ${j.mood_level ? `<span style="font-size:16px">${moodEmoji(j.mood_level)}</span>` : ""}
+            </div>
+            <div class="item-meta">${relativeTime(j.created_at)}${j.mood_tags.length ? " · " + j.mood_tags.map(t => `<span class="tag-chip green">${t}</span>`).join("") : ""}</div>
+            <div class="item-content">${j.content.slice(0, 120)}${j.content.length > 120 ? "…" : ""}</div>
+          </li>`).join("") + `</ul>`;
+      } catch (e) {
+        listEl.innerHTML = `<div class="empty"><p>${e.detail || "加载失败"}</p></div>`;
+      }
+    }
+    load();
+  </script>
+</body>
+</html>

@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>匿名倾诉 - 表达空间</title>
+  <link rel="stylesheet" href="../assets/css/theme.css">
+  <link rel="stylesheet" href="../assets/css/common.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="topbar-inner">
+      <a href="../index.html" class="brand">表达空间<small>ExpressSpace</small></a>
+      <nav class="nav" data-nav></nav>
+    </div>
+  </header>
+
+  <main class="container-narrow">
+    <div class="toolbar mt-24">
+      <h2>匿名倾诉</h2>
+      <a href="feed.html" class="btn btn-ghost btn-sm">← 返回树洞</a>
+    </div>
+
+    <div id="alert"></div>
+    <div id="crisis"></div>
+
+    <div class="card">
+      <div class="mb-16 text-faint" style="font-size:13px">
+        将以匿名身份发布：<strong id="anon-preview" style="color:var(--primary-deep)">…</strong>
+      </div>
+      <form id="post-form" onsubmit="submitPost(event)">
+        <div class="field">
+          <label>选择题材</label>
+          <div class="mood-picker" id="tag-picker">
+            <button type="button" class="mood-btn" data-tag="倾诉" onclick="pickTag('倾诉')">倾诉</button>
+            <button type="button" class="mood-btn" data-tag="求助" onclick="pickTag('求助')">求助</button>
+            <button type="button" class="mood-btn" data-tag="分享" onclick="pickTag('分享')">分享</button>
+          </div>
+        </div>
+
+        <div class="field">
+          <label>此刻心情</label>
+          <div class="mood-picker" id="mood-picker"></div>
+        </div>
+
+        <div class="field">
+          <label>想说的话（将匿名展示）</label>
+          <textarea id="content" rows="8" maxlength="3000" placeholder="把憋在心里的话说出来吧，这里没有人认识你。" onblur="precheckContent(this.value, 'crisis')"></textarea>
+          <div class="hint" id="counter">0 / 3000</div>
+        </div>
+
+        <button type="submit" class="btn btn-block" id="submit-btn">发布到树洞</button>
+      </form>
+    </div>
+  </main>
+
+  <script src="../assets/js/config.js"></script>
+  <script src="../assets/js/api.js"></script>
+  <script src="../assets/js/auth.js"></script>
+  <script src="../assets/js/safety.js"></script>
+  <script>
+    if (!requireLogin()) { /* 已跳转 */ }
+
+    let selectedTag = null;
+    let moodLevel = null;
+
+    document.getElementById("mood-picker").innerHTML = [1,2,3,4,5].map(l =>
+      `<button type="button" class="mood-btn" data-level="${l}" onclick="pickMood(${l})">${moodEmoji(l)}</button>`
+    ).join("");
+
+    document.getElementById("content").addEventListener("input", function() {
+      document.getElementById("counter").textContent = `${this.value.length} / 3000`;
+    });
+
+    function pickTag(t) {
+      selectedTag = t;
+      document.querySelectorAll("#tag-picker .mood-btn").forEach(b => b.classList.toggle("selected", b.dataset.tag === t));
+    }
+    function pickMood(l) {
+      moodLevel = l;
+      document.querySelectorAll("#mood-picker .mood-btn").forEach(b => b.classList.toggle("selected", parseInt(b.dataset.level) === l));
+    }
+
+    // 预取匿名名展示
+    Api.get("/meta/anonymous-name").then(res => {
+      document.getElementById("anon-preview").textContent = res.name;
+    }).catch(() => {});
+
+    async function submitPost(e) {
+      e.preventDefault();
+      clearAlert(document.getElementById("alert"));
+      const content = document.getElementById("content").value.trim();
+      if (!content) { showError(document.getElementById("alert"), "说点什么再发布吧"); return; }
+
+      // 预检
+      try {
+        const check = await Api.post("/content/check", { text: content, source: "treehole" });
+        if (check.action === "warn" && !document.getElementById("crisis").querySelector(".crisis-card")) {
+          document.getElementById("crisis").insertAdjacentHTML("afterbegin", renderCrisisCard());
+        }
+      } catch (e) {
+        showError(document.getElementById("alert"), e.detail);
+        return;
+      }
+
+      const btn = document.getElementById("submit-btn");
+      btn.disabled = true; btn.textContent = "发布中…";
+      try {
+        await Api.post("/treehole/posts", { content, tag: selectedTag, mood_level: moodLevel });
+        location.href = "feed.html";
+      } catch (e) {
+        showError(document.getElementById("alert"), e.detail);
+        btn.disabled = false; btn.textContent = "发布到树洞";
+      }
+    }
+  </script>
+</body>
+</html>

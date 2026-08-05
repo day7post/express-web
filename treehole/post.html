@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>树洞详情 - 表达空间</title>
+  <link rel="stylesheet" href="../assets/css/theme.css">
+  <link rel="stylesheet" href="../assets/css/common.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="topbar-inner">
+      <a href="../index.html" class="brand">表达空间<small>ExpressSpace</small></a>
+      <nav class="nav" data-nav></nav>
+    </div>
+  </header>
+
+  <main class="container-narrow">
+    <div class="toolbar mt-24">
+      <h2>树洞</h2>
+      <a href="feed.html" class="btn btn-ghost btn-sm">← 返回</a>
+    </div>
+
+    <div id="alert"></div>
+    <div id="post-area" class="loading">加载中…</div>
+    <div id="crisis"></div>
+
+    <div class="card" id="reply-area" style="display:none">
+      <h3 class="card-title">💌 给 TA 一点温暖</h3>
+      <textarea id="reply-content" rows="4" maxlength="1000" placeholder="认真读完 TA 的话，如果想说点什么，就温柔地说吧。" onblur="precheckContent(this.value, 'crisis')"></textarea>
+      <div class="mt-8" style="display:flex;justify-content:space-between;align-items:center">
+        <span class="text-faint" style="font-size:12px">你的回应也将匿名展示</span>
+        <button class="btn btn-sm" onclick="submitReply()">发送回应</button>
+      </div>
+    </div>
+  </main>
+
+  <script src="../assets/js/config.js"></script>
+  <script src="../assets/js/api.js"></script>
+  <script src="../assets/js/auth.js"></script>
+  <script src="../assets/js/safety.js"></script>
+  <script>
+    const postId = new URLSearchParams(location.search).get("id");
+    let postData = null;
+
+    function escapeHtml(s) {
+      return String(s).replace(/[&<>"']/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c]));
+    }
+
+    async function load() {
+      const area = document.getElementById("post-area");
+      try {
+        const data = await Api.get(`/treehole/posts/${postId}`);
+        postData = data.post;
+        const p = data.post;
+        const tagChip = p.tag ? `<span class="tag-chip green">${p.tag}</span>` : "";
+        area.innerHTML = `
+          <div class="post-card">
+            <div class="post-head">
+              <span class="post-name">${escapeHtml(p.anonymous_name)}</span>
+              <span class="post-time">${relativeTime(p.created_at)}</span>
+            </div>
+            ${tagChip}${p.mood_level ? `<span style="font-size:14px">${moodEmoji(p.mood_level)}</span>` : ""}
+            <div class="post-content mt-8">${escapeHtml(p.content)}</div>
+            <div class="post-foot">
+              <span>❤️ ${p.like_count}</span>
+              <span>💬 ${p.reply_count} 条回应</span>
+            </div>
+          </div>`;
+
+        // 回应列表
+        const replies = data.replies;
+        const repliesHtml = replies.length ? `<div class="card mt-16"><h3 class="card-title">💬 大家的声音</h3>` +
+          replies.map(r => `
+            <div style="padding:12px 0;border-bottom:1px solid var(--border)">
+              <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--text-faint);margin-bottom:4px">
+                <span style="color:var(--primary-deep);font-weight:600">${escapeHtml(r.anonymous_name)}</span>
+                <span>${relativeTime(r.created_at)}</span>
+              </div>
+              <div style="font-size:14px;color:var(--text-soft);white-space:pre-wrap">${escapeHtml(r.content)}</div>
+            </div>`).join("") + `</div>` : "";
+
+        area.insertAdjacentHTML("beforeend", repliesHtml);
+
+        // 回复区
+        document.getElementById("reply-area").style.display = Api.isLoggedIn() ? "" : "none";
+        if (!Api.isLoggedIn()) {
+          area.insertAdjacentHTML("beforeend", `<p class="text-center text-faint mt-8" style="font-size:13px"><a href="../auth.html">登录</a> 后可以给 TA 回应</p>`);
+        }
+      } catch (e) {
+        area.innerHTML = `<div class="empty"><p>${e.detail || "加载失败"}</p></div>`;
+      }
+    }
+
+    async function submitReply() {
+      clearAlert(document.getElementById("alert"));
+      const content = document.getElementById("reply-content").value.trim();
+      if (!content) { showError(document.getElementById("alert"), "写点什么再发送吧"); return; }
+      try {
+        await Api.post(`/treehole/posts/${postId}/replies`, { content });
+        location.reload();
+      } catch (e) {
+        showError(document.getElementById("alert"), e.detail);
+      }
+    }
+
+    load();
+  </script>
+</body>
+</html>
