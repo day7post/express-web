@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>心之沙盘 - 语滞</title>
+  <meta name="description" content="心之沙盘：用沙具摆出你的内心世界，一步步看见自己。借鉴沙盘疗法的自我探索工具。">
+  <link rel="stylesheet" href="../assets/css/theme.css">
+  <link rel="stylesheet" href="../assets/css/common.css">
+  <style>
+    .sandbox-layout { display: grid; grid-template-columns: 1fr 260px; gap: 20px; align-items: start; }
+    @media (max-width: 800px) { .sandbox-layout { grid-template-columns: 1fr; } }
+
+    .sand-tray {
+      background: linear-gradient(160deg, #f0e4c8 0%, #e5d3ab 100%);
+      border-radius: var(--radius);
+      min-height: 420px;
+      position: relative;
+      border: 2px dashed #d4bc8a;
+      overflow: hidden;
+      box-shadow: inset 0 4px 20px rgba(150, 120, 70, 0.15);
+      cursor: crosshair;
+    }
+    .sand-tray .hint-text {
+      position: absolute; inset: 0;
+      display: flex; align-items: center; justify-content: center;
+      color: #b09a6a; font-size: 15px; text-align: center;
+      padding: 20px; pointer-events: none; line-height: 2;
+    }
+    .sand-item {
+      position: absolute;
+      font-size: 34px;
+      cursor: grab;
+      user-select: none;
+      transition: transform 0.15s;
+      text-shadow: 0 2px 4px rgba(0,0,0,0.15);
+      z-index: 5;
+      line-height: 1;
+    }
+    .sand-item:hover { transform: scale(1.15); z-index: 10; }
+    .sand-item.selected { outline: 2px dashed var(--danger); border-radius: 8px; }
+
+    .tray-panel {
+      background: var(--surface);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 16px;
+      position: sticky; top: 80px;
+      max-height: 75vh;
+      display: flex; flex-direction: column;
+    }
+    .tray-cats { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 10px; }
+    .tray-cats .tab { padding: 5px 12px; border-radius: 16px; border: 1px solid var(--border); background: var(--surface); cursor: pointer; font-size: 12px; color: var(--text-soft); }
+    .tray-cats .tab.active { background: var(--primary-soft); color: var(--primary-deep); border-color: var(--primary); }
+    .tray-items { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; overflow-y: auto; flex: 1; }
+    .tray-item {
+      display: flex; flex-direction: column; align-items: center;
+      padding: 8px 4px; border: 1px solid var(--border); border-radius: 10px;
+      cursor: pointer; transition: all 0.15s; font-size: 11px; color: var(--text-soft);
+    }
+    .tray-item:hover { border-color: var(--primary); background: var(--primary-soft); }
+    .tray-item .e { font-size: 26px; margin-bottom: 2px; }
+
+    .step-dots { display: flex; gap: 8px; justify-content: center; margin-bottom: 20px; }
+    .step-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--border); }
+    .step-dot.active { background: var(--primary); }
+    .step-dot.done { background: var(--primary-deep); }
+
+    .step-title { font-size: 18px; font-weight: 600; margin-bottom: 6px; }
+    .step-sub { font-size: 13px; color: var(--text-soft); margin-bottom: 16px; }
+
+    .report-box {
+      background: var(--surface-soft);
+      border-radius: var(--radius-sm);
+      padding: 20px;
+      white-space: pre-wrap;
+      line-height: 2;
+      font-size: 14px;
+      border: 1px dashed var(--border);
+    }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="topbar-inner">
+      <a href="../index.html" class="brand">语滞<small>Yuzhi</small></a>
+      <nav class="nav" data-nav></nav>
+    </div>
+  </header>
+
+  <main class="container-narrow">
+    <div class="toolbar mt-24">
+      <h2>🏖️ 心之沙盘</h2>
+      <a href="hub.html" class="btn btn-ghost btn-sm">← 创作中心</a>
+    </div>
+    <p class="text-soft mb-16" style="font-size:14px">
+      说不出的话，让沙具替你说。选择有感觉的沙具放进沙盘，摆出你的内心世界，我们一起慢慢看。
+    </p>
+
+    <div class="step-dots">
+      <div class="step-dot active" id="dot1"></div>
+      <div class="step-dot" id="dot2"></div>
+      <div class="step-dot" id="dot3"></div>
+    </div>
+
+    <!-- 第一步：摆沙盘 -->
+    <div id="step1">
+      <div class="step-title">第一步：摆下你的沙盘</div>
+      <div class="step-sub">从右边挑选有感觉的沙具，点击或拖拽放进沙盘。放 3-10 个都可以，跟着感觉走。</div>
+
+      <div class="sandbox-layout">
+        <div class="sand-tray" id="sand-tray">
+          <div class="hint-text" id="tray-hint">✨ 从右侧选沙具，放在这里<br>（点一下沙具就会放到沙盘中央）</div>
+        </div>
+
+        <div class="tray-panel">
+          <div class="tray-cats" id="tray-cats"></div>
+          <div class="tray-items" id="tray-items"></div>
+          <div style="margin-top:10px;display:flex;gap:8px">
+            <button class="btn btn-soft btn-sm" style="flex:1" onclick="clearSandbox()">清空</button>
+            <button class="btn btn-sm" style="flex:2" onclick="nextStep()" id="btn-next1">进入下一步 →</button>
+          </div>
+        </div>
+      </div>
+      <p class="text-faint mt-8" style="font-size:12px">提示：在沙盘上点一下已有沙具可以选中，再点「删除」移除。</p>
+    </div>
+
+    <!-- 第二步：反思引导 -->
+    <div id="step2" style="display:none">
+      <div class="step-title">第二步：和你的沙盘对话</div>
+      <div class="step-sub">慢慢回答下面几个问题，不用急。想到什么就写什么。</div>
+
+      <div class="card" id="reflection-form">
+        <div id="reflection-questions"></div>
+        <div style="display:flex;gap:10px;margin-top:8px">
+          <button class="btn btn-ghost" onclick="prevStep()">← 返回沙盘</button>
+          <button class="btn" style="flex:1" onclick="generateReport()">生成探索报告</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 第三步：报告 -->
+    <div id="step3" style="display:none">
+      <div class="step-title">第三步：你的探索报告</div>
+      <div class="step-sub">这份报告来自你的选择与思考，不是诊断，只是一面温柔的镜子。</div>
+
+      <div class="report-box" id="report-box"></div>
+      <div class="mt-16" style="display:flex;gap:10px">
+        <button class="btn" onclick="copyReport()">复制报告</button>
+        <button class="btn btn-ghost" onclick="saveReport()">保存到我的作品</button>
+        <button class="btn btn-ghost" onclick="resetAll()">再摆一次</button>
+      </div>
+    </div>
+
+    <div class="disclaimer mt-24">
+      <strong>关于心之沙盘：</strong>本工具借鉴沙盘疗法的「投射」原理，帮助你用沙具表达和探索内心，是一种<strong>自我探索工具，不构成心理治疗或诊断</strong>。若你正经历持续的情绪困扰，请拨打心理援助热线 <strong>12356</strong> 或查看<a href="../safety.html">心理资源</a>。
+    </div>
+  </main>
+
+  <script src="../assets/js/config.js"></script>
+  <script src="../assets/js/api.js"></script>
+  <script src="../assets/js/auth.js"></script>
+  <script src="../assets/js/sandbox.js"></script>
+  <script>
+    // ===== 状态 =====
+    let currentCat = 0;
+    let placedItems = [];   // {id, e, label, symbol, cat, x, y}
+    let selectedId = null;
+    let answers = {};
+    let seq = 0;
+
+    // ===== 沙具面板 =====
+    function renderCats() {
+      document.getElementById("tray-cats").innerHTML = SANDBOX_CATEGORIES.map((c, i) =>
+        `<span class="tab ${i === currentCat ? "active" : ""}" onclick="switchCat(${i})">${c.name}</span>`
+      ).join("");
+    }
+    function switchCat(i) { currentCat = i; renderCats(); renderItems(); }
+    function renderItems() {
+      const cat = SANDBOX_CATEGORIES[currentCat];
+      document.getElementById("tray-items").innerHTML = cat.items.map((it, idx) => `
+        <div class="tray-item" onclick="addItem(${currentCat}, ${idx})" title="${it.symbol}">
+          <span class="e">${it.e}</span>${it.label}
+        </div>`).join("");
+    }
+
+    // ===== 沙盘操作 =====
+    const tray = document.getElementById("sand-tray");
+
+    function addItem(catIdx, itemIdx) {
+      const it = SANDBOX_CATEGORIES[catIdx].items[itemIdx];
+      const trayRect = tray.getBoundingClientRect();
+      placedItems.push({
+        id: "s" + (++seq),
+        e: it.e, label: it.label, symbol: it.symbol, cat: SANDBOX_CATEGORIES[catIdx].name,
+        x: trayRect.width / 2 + (Math.random() * 60 - 30),
+        y: trayRect.height / 2 + (Math.random() * 40 - 20),
+      });
+      renderSandbox();
+    }
+
+    function renderSandbox() {
+      document.getElementById("tray-hint").style.display = placedItems.length ? "none" : "";
+      tray.querySelectorAll(".sand-item").forEach(n => n.remove());
+      placedItems.forEach(item => {
+        const el = document.createElement("div");
+        el.className = "sand-item" + (item.id === selectedId ? " selected" : "");
+        el.textContent = item.e;
+        el.style.left = (item.x - 17) + "px";
+        el.style.top = (item.y - 17) + "px";
+        el.title = item.label + "：" + item.symbol;
+        el.addEventListener("mousedown", e => { e.stopPropagation(); selectItem(item.id); startDrag(e, item); });
+        el.addEventListener("touchstart", e => { e.stopPropagation(); selectItem(item.id); }, { passive: true });
+        el.addEventListener("dblclick", () => removeItem(item.id));
+        tray.appendChild(el);
+      });
+    }
+
+    function selectItem(id) {
+      selectedId = (selectedId === id) ? null : id;
+      renderSandbox();
+    }
+
+    function removeItem(id) {
+      if (!confirm("移除这个沙具吗？")) return;
+      placedItems = placedItems.filter(i => i.id !== id);
+      selectedId = null;
+      renderSandbox();
+    }
+
+    function clearSandbox() {
+      if (!placedItems.length) return;
+      if (!confirm("清空沙盘吗？")) return;
+      placedItems = []; selectedId = null; renderSandbox();
+    }
+
+    // 点击沙盘空白处 = 删除选中
+    tray.addEventListener("click", e => {
+      if (e.target === tray && selectedId) { selectedId = null; renderSandbox(); }
+    });
+
+    // ===== 拖拽 =====
+    function startDrag(e, item) {
+      const trayRect = tray.getBoundingClientRect();
+      const move = ev => {
+        const cx = (ev.clientX || ev.touches[0].clientX) - trayRect.left;
+        const cy = (ev.clientY || ev.touches[0].clientY) - trayRect.top;
+        item.x = Math.max(20, Math.min(trayRect.width - 20, cx));
+        item.y = Math.max(20, Math.min(trayRect.height - 20, cy));
+        renderSandbox();
+      };
+      const up = () => {
+        document.removeEventListener("mousemove", move);
+        document.removeEventListener("mouseup", up);
+        document.removeEventListener("touchmove", move);
+        document.removeEventListener("touchend", up);
+      };
+      document.addEventListener("mousemove", move);
+      document.addEventListener("mouseup", up);
+      document.addEventListener("touchmove", move, { passive: true });
+      document.addEventListener("touchend", up);
+    }
+
+    // ===== 步骤控制 =====
+    function goStep(n) {
+      document.getElementById("step1").style.display = n === 1 ? "" : "none";
+      document.getElementById("step2").style.display = n === 2 ? "" : "none";
+      document.getElementById("step3").style.display = n === 3 ? "" : "none";
+      [1, 2, 3].forEach(i => {
+        const dot = document.getElementById("dot" + i);
+        dot.className = "step-dot" + (i < n ? " done" : "") + (i === n ? " active" : "");
+      });
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+
+    function nextStep() {
+      if (placedItems.length < 1) { alert("先放至少 1 个沙具再继续哦"); return; }
+      if (!document.getElementById("reflection-questions").childElementCount) renderQuestions();
+      goStep(2);
+    }
+    function prevStep() { goStep(1); }
+
+    function renderQuestions() {
+      document.getElementById("reflection-questions").innerHTML = SANDBOX_REFLECTION_QUESTIONS.map(q => `
+        <div class="field">
+          <label>${q.question}</label>
+          <textarea id="ans-${q.key}" rows="2" placeholder="${q.placeholder}"></textarea>
+        </div>`).join("");
+    }
+
+    // ===== 报告 =====
+    function generateReport() {
+      SANDBOX_REFLECTION_QUESTIONS.forEach(q => {
+        const el = document.getElementById("ans-" + q.key);
+        answers[q.key] = el ? el.value.trim() : "";
+      });
+      const report = buildSandboxReport(placedItems, answers);
+      document.getElementById("report-box").textContent = report;
+      goStep(3);
+    }
+
+    function copyReport() {
+      const text = document.getElementById("report-box").textContent;
+      navigator.clipboard.writeText(text).then(() => alert("已复制 📋"));
+    }
+
+    async function saveReport() {
+      if (!Api.isLoggedIn()) { location.href = "../auth.html"; return; }
+      try {
+        await Api.post("/creations", {
+          tool_type: "template",
+          template_id: "sandbox",
+          title: "心之沙盘探索",
+          content: document.getElementById("report-box").textContent,
+          raw_input: {},
+        });
+        alert("已保存到我的作品 📂");
+      } catch (e) { showError(document.getElementById("alert") || null, e.detail); alert(e.detail || "保存失败"); }
+    }
+
+    function resetAll() {
+      if (!confirm("重新开始吗？当前沙盘会清空。")) return;
+      placedItems = []; selectedId = null; answers = {}; seq = 0;
+      renderSandbox(); goStep(1);
+    }
+
+    // ===== 初始化 =====
+    renderCats();
+    renderItems();
+    renderSandbox();
+  </script>
+</body>
+</html>
