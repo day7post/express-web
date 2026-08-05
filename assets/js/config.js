@@ -1,7 +1,7 @@
 // ===== API 地址单点配置 =====
 // 线上：Cloudflare Tunnel 免费 HTTPS 隧道（后端在本机运行）
 // 注意：隧道地址重启后会变，需要同步更新这里并重新推送
-const API_BASE = "https://handed-poultry-punk-africa.trycloudflare.com/api";
+const API_BASE = "https://javascript-working-crm-respondent.trycloudflare.com/api";
 
 // 站点显示名（定名后替换）
 const SITE_NAME = "语滞";
