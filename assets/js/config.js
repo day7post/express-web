@@ -1,7 +1,7 @@
 // ===== API 地址单点配置 =====
-// 本地开发：后端在 127.0.0.1:8000
-// 线上：改成你的后端域名（如 https://api.你的域名.com）
-const API_BASE = "http://127.0.0.1:8000/api";
+// 线上：Cloudflare Tunnel 免费 HTTPS 隧道（后端在本机运行）
+// 注意：隧道地址重启后会变，需要同步更新这里并重新推送
+const API_BASE = "https://gap-alerts-evening-among.trycloudflare.com/api";
 
 // 站点显示名（定名后替换）
 const SITE_NAME = "语滞";
