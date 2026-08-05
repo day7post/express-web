@@ -4,8 +4,9 @@
 const API_BASE = "http://127.0.0.1:8000/api";
 
 // 站点显示名（定名后替换）
-const SITE_NAME = "表达空间";
-const SITE_SLOGAN = "让每一次想说，都能好好说出来";
+const SITE_NAME = "语滞";
+const SITE_SLOGAN = "有些话说不出口，不代表不想说。";
+const SITE_DESC = "语滞 —— 一个帮助你把心里话好好说出来的空间：私密日记、匿名树洞、创作辅助。";
 
 // 心理援助热线（危机干预引导用）
 const CRISIS_HOTLINES = [
