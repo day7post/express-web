@@ -3,6 +3,13 @@ document.addEventListener("DOMContentLoaded", () => {
   renderNav();
 });
 
+// 根据当前页面深度生成相对前缀，保证子目录页面（journal/ treehole/ create/ tests/）顶部导航也能正确跳转
+function navBase() {
+  const segs = location.pathname.split("/").filter(Boolean);
+  segs.pop(); // 去掉文件名
+  return segs.length ? "../".repeat(segs.length) : "";
+}
+
 function renderNav() {
   const nav = document.querySelector("[data-nav]");
   if (!nav) return;
@@ -10,12 +17,14 @@ function renderNav() {
   const user = Api.getUser();
   const isLoggedIn = Api.isLoggedIn();
 
+  const base = navBase();
   const links = [
-    '<a href="index.html">首页</a>',
-    '<a href="journal/list.html">日记</a>',
-    '<a href="treehole/feed.html">树洞</a>',
-    '<a href="create/hub.html">创作</a>',
-    '<a href="safety.html">心理资源</a>',
+    '<a href="' + base + 'index.html">首页</a>',
+    '<a href="' + base + 'journal/list.html">日记</a>',
+    '<a href="' + base + 'drift/index.html">信箱</a>',
+    '<a href="' + base + 'create/hub.html">创作</a>',
+    '<a href="' + base + 'tests/hub.html">心理测试</a>',
+    '<a href="' + base + 'safety.html">心理资源</a>',
   ];
 
   let userHtml;

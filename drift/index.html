@@ -1,0 +1,1571 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>拾光信箱 · 心灵漂流</title>
+<style>
+/* =====================================================================
+   拾光信箱 · 心灵漂流  ——  单文件匿名倾诉应用
+   纯前端 / 内联CSS+JS / localStorage 模拟后端 / 移动端优先
+   配色：奶油色 #faf6ef · 鼠尾草绿 #6fae93 · 暖杏 #f3c89b
+   ===================================================================== */
+
+:root{
+  /* 治愈系配色（高饱和、对比明确，按钮实心可点） */
+  --cream:#faf6ef;
+  --cream-2:#f3ece0;
+  --surface:#fffdf9;
+  --sage:#6fae93;
+  --sage-deep:#3f7e66;
+  --sage-soft:#e1f0e8;
+  --apricot:#f3c89b;
+  --apricot-deep:#e0a86a;
+  --sky:#9ec7d8;
+  --sky-soft:#e3f0f5;
+  --rose:#e89aa6;
+  --rose-soft:#f9e6ea;
+  --ink:#3a4a42;
+  --ink-soft:#62746b;
+  --ink-faint:#9aa8a0;
+  --line:#e6ddcb;
+  --shadow:0 4px 18px rgba(90,120,105,.14);
+  --shadow-lg:0 12px 40px rgba(90,120,105,.22);
+  --radius:22px;
+  --radius-sm:14px;
+  --font:"Yuanti SC","圆体-简","PingFang SC","Hiragino Sans GB","Microsoft YaHei","Noto Sans SC",system-ui,sans-serif;
+}
+
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{height:100%}
+body{
+  font-family:var(--font);
+  color:var(--ink);
+  background:linear-gradient(160deg,#fbf7ef 0%,#f3efe4 40%,#eaf3ec 100%);
+  line-height:1.7;
+  overflow-x:hidden;
+  position:relative;
+  padding-bottom:84px; /* 底部导航空间 */
+}
+a{color:var(--sage-deep);text-decoration:none}
+h1,h2,h3,h4{font-weight:600;line-height:1.4}
+button{font-family:inherit;cursor:pointer}
+
+/* ===== 漂浮背景（蒲公英/树叶/光斑/海浪） ===== */
+.sky{position:fixed;inset:0;pointer-events:none;z-index:0;overflow:hidden}
+.float-item{position:absolute;opacity:.5;filter:blur(.2px);animation:drift linear infinite}
+@keyframes drift{
+  0%{transform:translate(0,0) rotate(0deg)}
+  100%{transform:translate(var(--dx,40px),-120vh) rotate(220deg)}
+}
+.wave{position:fixed;left:0;right:0;bottom:-10px;height:160px;z-index:0;pointer-events:none;opacity:.5;
+  background:radial-gradient(120% 100% at 50% 100%, rgba(158,199,216,.35), transparent 70%);
+  animation:waveMove 9s ease-in-out infinite alternate}
+@keyframes waveMove{from{transform:translateY(8px) scaleY(1)}to{transform:translateY(-6px) scaleY(1.06)}}
+
+/* ===== 顶部栏 ===== */
+.topbar{position:sticky;top:0;z-index:50;background:rgba(255,253,249,.86);backdrop-filter:blur(10px);
+  border-bottom:1px solid var(--line);padding:12px 18px;display:flex;align-items:center;justify-content:space-between}
+.brand{display:flex;flex-direction:column;line-height:1.1}
+.brand b{font-size:18px;color:var(--sage-deep);letter-spacing:1px}
+.brand small{font-size:11px;color:var(--ink-faint)}
+.identity{display:flex;align-items:center;gap:8px;background:var(--sage-soft);border-radius:30px;padding:5px 12px 5px 6px}
+.avatar{width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:16px;
+  background:linear-gradient(135deg,#fff,#eef6f0);box-shadow:inset 0 0 0 2px #fff,var(--shadow)}
+.identity .nm{font-size:12px;color:var(--sage-deep);font-weight:600;max-width:110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+/* ===== 主体容器 ===== */
+#app{position:relative;z-index:2;max-width:680px;margin:0 auto;padding:18px 16px 24px}
+.view{animation:fadeUp .45s ease both}
+@keyframes fadeUp{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+
+/* ===== 主页标题 ===== */
+.hero{text-align:center;padding:14px 10px 8px}
+.hero h1{font-size:25px;color:var(--sage-deep);letter-spacing:1px}
+.hero p{font-size:13.5px;color:var(--ink-soft);margin-top:6px;padding:0 6px}
+
+/* ===== 模式入口卡片 ===== */
+.modes{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:18px}
+.mode-card{position:relative;background:var(--surface);border-radius:var(--radius);padding:18px 16px;box-shadow:var(--shadow);
+  cursor:pointer;transition:transform .25s cubic-bezier(.34,1.56,.64,1),box-shadow .25s;overflow:hidden;border:1px solid #fff}
+.mode-card:active{transform:scale(.96)}
+.mode-card:hover{transform:translateY(-4px);box-shadow:var(--shadow-lg)}
+.mode-card .art{font-size:40px;height:56px;display:flex;align-items:center;justify-content:center;
+  filter:drop-shadow(0 4px 6px rgba(0,0,0,.08))}
+.mode-card h3{font-size:16px;color:var(--ink);margin:4px 0 4px}
+.mode-card p{font-size:12px;color:var(--ink-soft);line-height:1.55}
+.mode-card .glow{position:absolute;right:-30px;bottom:-30px;width:90px;height:90px;border-radius:50%;opacity:.35;filter:blur(8px)}
+.mode-card.dandelion .glow{background:var(--apricot)}
+.mode-card.island .glow{background:var(--sky)}
+.mode-card.treehole .glow{background:var(--sage)}
+.mode-card.mailbox .glow{background:var(--rose)}
+.badge{position:absolute;top:10px;right:10px;min-width:22px;height:22px;padding:0 6px;border-radius:12px;background:var(--rose);
+  color:#fff;font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(232,154,166,.6);
+  animation:pop .4s cubic-bezier(.34,1.56,.64,1) both}
+@keyframes pop{from{transform:scale(0)}to{transform:scale(1)}}
+
+/* ===== 通用卡片/按钮 ===== */
+.card{background:var(--surface);border-radius:var(--radius);padding:18px;box-shadow:var(--shadow);margin-bottom:14px;border:1px solid #fff}
+.card h3.ct{font-size:16px;margin-bottom:10px;color:var(--sage-deep)}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;border:none;border-radius:var(--radius-sm);
+  padding:11px 18px;font-size:14px;font-weight:600;background:var(--sage);color:#fff;box-shadow:0 3px 10px rgba(111,174,147,.45);
+  transition:transform .15s,background .2s,box-shadow .2s;cursor:pointer}
+.btn:active{transform:translateY(1px) scale(.98)}
+.btn:hover{background:var(--sage-deep)}
+.btn-soft{background:var(--sage-soft);color:var(--sage-deep);box-shadow:none}
+.btn-soft:hover{background:var(--sage);color:#fff}
+.btn-apricot{background:var(--apricot);box-shadow:0 3px 10px rgba(243,200,155,.5);color:#6b4a23}
+.btn-apricot:hover{background:var(--apricot-deep);color:#fff}
+.btn-ghost{background:transparent;color:var(--ink-soft);box-shadow:none;border:1.5px solid var(--line)}
+.btn-ghost:hover{background:var(--cream-2);color:var(--ink)}
+.btn-block{width:100%}
+.btn-sm{padding:7px 13px;font-size:13px}
+.btn[disabled]{opacity:.45;pointer-events:none}
+
+/* ===== 表单 ===== */
+.field{margin-bottom:14px}
+.field label{display:block;font-size:13px;color:var(--ink-soft);margin-bottom:7px;font-weight:600}
+.field textarea,.field input[type=text]{width:100%;padding:12px 14px;border:1.5px solid var(--line);border-radius:var(--radius-sm);
+  font-family:inherit;font-size:14px;background:var(--surface);color:var(--ink);resize:vertical;transition:border .2s}
+.field textarea{min-height:120px}
+.field textarea:focus,.field input:focus{outline:none;border-color:var(--sage)}
+.hint{font-size:12px;color:var(--ink-faint);margin-top:5px;text-align:right}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{border:1.5px solid var(--line);background:var(--surface);border-radius:30px;padding:7px 14px;font-size:13px;cursor:pointer;
+  transition:all .18s;user-select:none}
+.chip:active{transform:scale(.94)}
+.chip.on{background:var(--sage);color:#fff;border-color:var(--sage);box-shadow:0 2px 8px rgba(111,174,147,.4)}
+.papers{display:flex;gap:10px;flex-wrap:wrap}
+.paper{width:46px;height:58px;border-radius:10px;border:2px solid transparent;cursor:pointer;box-shadow:var(--shadow);transition:transform .15s,border .15s}
+.paper:active{transform:scale(.92)}
+.paper.on{border-color:var(--sage-deep);transform:translateY(-3px)}
+
+/* ===== 写信悬浮按钮 ===== */
+.fab{position:fixed;left:50%;bottom:64px;transform:translateX(-50%);z-index:60;width:62px;height:62px;border-radius:50%;
+  background:linear-gradient(135deg,var(--sage),var(--sage-deep));color:#fff;font-size:26px;border:none;box-shadow:var(--shadow-lg);
+  display:flex;align-items:center;justify-content:center;animation:bob 2.6s ease-in-out infinite}
+@keyframes bob{0%,100%{transform:translateX(-50%) translateY(0)}50%{transform:translateX(-50%) translateY(-7px)}}
+.fab:active{transform:translateX(-50%) scale(.92)}
+
+/* ===== 底部导航 ===== */
+.tabbar{position:fixed;left:0;right:0;bottom:0;z-index:55;background:rgba(255,253,249,.94);backdrop-filter:blur(10px);
+  border-top:1px solid var(--line);display:flex;justify-content:space-around;padding:8px 4px;max-width:680px;margin:0 auto}
+.tab{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;color:var(--ink-faint);font-size:11px;background:none;border:none;padding:4px}
+.tab .ic{font-size:20px;transition:transform .2s}
+.tab.on{color:var(--sage-deep)}
+.tab.on .ic{transform:translateY(-2px) scale(1.12)}
+
+/* ===== 写信弹窗 ===== */
+.modal{position:fixed;inset:0;z-index:80;background:rgba(58,74,66,.42);backdrop-filter:blur(3px);display:none;
+  align-items:flex-end;justify-content:center;animation:fade .25s}
+.modal.show{display:flex}
+@keyframes fade{from{opacity:0}to{opacity:1}}
+.sheet{background:var(--cream);width:100%;max-width:680px;border-radius:26px 26px 0 0;padding:20px 18px 26px;max-height:92vh;overflow-y:auto;
+  animation:slideUp .35s cubic-bezier(.2,.8,.2,1) both;box-shadow:var(--shadow-lg)}
+@keyframes slideUp{from{transform:translateY(100%)}to{transform:none}}
+.sheet-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px}
+.sheet-head h2{font-size:18px;color:var(--sage-deep)}
+.x{border:none;background:var(--cream-2);width:32px;height:32px;border-radius:50%;font-size:18px;color:var(--ink-soft)}
+.mode-tabs{display:flex;gap:8px;margin-bottom:16px;overflow-x:auto;padding-bottom:4px}
+.mode-tab{flex:0 0 auto;border:1.5px solid var(--line);background:var(--surface);border-radius:30px;padding:8px 14px;font-size:13px;
+  white-space:nowrap;cursor:pointer;transition:all .18s}
+.mode-tab.on{background:var(--sage);color:#fff;border-color:var(--sage)}
+
+/* ===== 信件/帖子卡片 ===== */
+.letter{background:var(--surface);border-radius:var(--radius);padding:16px;box-shadow:var(--shadow);margin-bottom:12px;position:relative;
+  border-left:5px solid var(--sage);animation:fadeUp .4s both}
+.letter .lh{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
+.letter .nm{font-size:13px;font-weight:600;color:var(--sage-deep);display:flex;align-items:center;gap:7px}
+.letter .tm{font-size:11px;color:var(--ink-faint)}
+.letter .title{font-size:15px;font-weight:600;margin:6px 0 4px;color:var(--ink)}
+.letter .body{font-size:14px;color:var(--ink-soft);white-space:pre-wrap;word-break:break-word;max-height:84px;overflow:hidden;transition:max-height .4s}
+.letter.open .body{max-height:1200px}
+.letter .more{font-size:12px;color:var(--sage-deep);margin-top:4px;font-weight:600}
+.tag{display:inline-block;background:var(--sage-soft);color:var(--sage-deep);border-radius:20px;padding:2px 10px;font-size:11px;margin:2px 4px 2px 0}
+.tag.m{background:var(--apricot);color:#6b4a23}
+.taglist{margin:6px 0}
+
+/* ===== 对话 ===== */
+.conv{display:flex;gap:10px;margin-bottom:12px;align-items:flex-start}
+.conv.me{flex-direction:row-reverse}
+.bubble{max-width:74%;padding:10px 14px;border-radius:18px;font-size:14px;line-height:1.6;white-space:pre-wrap;word-break:break-word;
+  box-shadow:var(--shadow);animation:pop .3s both}
+.conv.them .bubble{background:var(--surface);border-bottom-left-radius:5px}
+.conv.me .bubble{background:var(--sage);color:#fff;border-bottom-right-radius:5px}
+.chatbox{display:flex;flex-direction:column;gap:2px}
+.chat-input{display:flex;gap:8px;margin-top:10px}
+.chat-input input{flex:1;padding:11px 14px;border:1.5px solid var(--line);border-radius:30px;font-family:inherit;font-size:14px}
+.chat-input input:focus{outline:none;border-color:var(--sage)}
+
+/* ===== 评论系统 ===== */
+.comments{margin-top:12px;border-top:1px dashed var(--line);padding-top:12px}
+.cmt{display:flex;gap:9px;margin-bottom:12px}
+.cmt .ca{width:30px;height:30px;border-radius:50%;flex:0 0 auto;display:flex;align-items:center;justify-content:center;font-size:15px;
+  background:var(--sage-soft)}
+.cmt .cb{flex:1;min-width:0}
+.cmt .cmeta{font-size:12px;color:var(--ink-faint);display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.cmt .cname{color:var(--sage-deep);font-weight:600}
+.cmt .cemoji{font-size:14px}
+.cmt .ctext{font-size:14px;color:var(--ink-soft);white-space:pre-wrap;word-break:break-word;margin:2px 0}
+.cmt .cact{display:flex;gap:14px;font-size:12px;color:var(--ink-faint);margin-top:2px}
+.cmt .cact span{cursor:pointer;user-select:none;transition:color .15s}
+.cmt .cact span:hover{color:var(--sage-deep)}
+.cmt .like.on{color:var(--rose)}
+.replies{margin-top:10px;padding-left:12px;border-left:2px solid var(--line)}
+.reply-box{margin-top:8px;display:flex;gap:6px}
+.reply-box input{flex:1;padding:8px 12px;border:1.5px solid var(--line);border-radius:20px;font-family:inherit;font-size:13px}
+.reply-box input:focus{outline:none;border-color:var(--sage)}
+.emoji-pick{display:flex;gap:6px;flex-wrap:wrap;margin:6px 0}
+.emoji-pick span{font-size:18px;cursor:pointer;filter:grayscale(.4);transition:transform .12s}
+.emoji-pick span.on{transform:scale(1.3);filter:none}
+.emoji-pick span:active{transform:scale(.9)}
+
+/* ===== 岛屿 ===== */
+.island-card{background:linear-gradient(160deg,#eaf4f7,#dceef2);border-radius:var(--radius);padding:20px;box-shadow:var(--shadow);margin-bottom:14px;text-align:center}
+.island-shape{width:120px;height:120px;border-radius:50% 50% 46% 46%;margin:0 auto 10px;display:flex;align-items:center;justify-content:center;font-size:46px;
+  box-shadow:inset 0 -10px 20px rgba(0,0,0,.08),var(--shadow);position:relative}
+.island-shape::after{content:"";position:absolute;inset:-6px;border-radius:inherit;border:3px solid rgba(255,255,255,.5)}
+.theme-贝壳沙滩{background:linear-gradient(160deg,#ffe9cf,#ffd9a8)}
+.theme-月光海岸{background:linear-gradient(160deg,#dfe7f7,#c7d6f0)}
+.theme-秘密花园{background:linear-gradient(160deg,#e3f3df,#c9ecc2)}
+.theme-星河孤岛{background:linear-gradient(160deg,#e7def7,#d3c2ee)}
+.theme-pick{display:flex;gap:10px;flex-wrap:wrap;justify-content:center}
+.theme-opt{cursor:pointer;text-align:center;font-size:12px;color:var(--ink-soft);transition:transform .15s}
+.theme-opt .sw{width:54px;height:54px;border-radius:16px;display:flex;align-items:center;justify-content:center;font-size:26px;margin-bottom:4px;box-shadow:var(--shadow)}
+.theme-opt.on .sw{border:3px solid var(--sage-deep);transform:translateY(-3px)}
+
+/* ===== 树洞 ===== */
+.treehole-stage{position:relative;background:radial-gradient(circle at 50% 30%,#2c4a3f,#16271f);border-radius:var(--radius);
+  padding:24px 16px 28px;min-height:280px;overflow:hidden;box-shadow:var(--shadow);text-align:center;color:#e8f3ec}
+.tree-hole{width:130px;height:130px;border-radius:50%;margin:8px auto 14px;background:radial-gradient(circle at 50% 45%,#ffe9a8,#caa24a 60%,#5a4520);
+  box-shadow:0 0 40px 10px rgba(255,220,140,.45);animation:pulse 3s ease-in-out infinite;position:relative}
+@keyframes pulse{0%,100%{box-shadow:0 0 30px 6px rgba(255,220,140,.35)}50%{box-shadow:0 0 55px 16px rgba(255,220,140,.6)}}
+.tree-hole::before{content:"";position:absolute;inset:18px;border-radius:50%;background:radial-gradient(circle,#1c1208,#3a2a12)}
+.dig-btn{margin-top:6px}
+.firefly{position:absolute;width:7px;height:7px;border-radius:50%;background:rgba(255,240,170,.95);box-shadow:0 0 10px 4px rgba(255,235,150,.8);
+  animation:ff 6s ease-in-out infinite}
+@keyframes ff{0%,100%{transform:translate(0,0);opacity:.4}50%{transform:translate(var(--fx,20px),var(--fy,-30px));opacity:1}}
+.trees{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px}
+
+/* ===== 全屏动画层 ===== */
+#fx{position:fixed;inset:0;z-index:200;pointer-events:none;display:none}
+#fx.show{display:block}
+.seed{position:absolute;width:10px;height:10px;border-radius:50% 50% 50% 0;background:#fff;box-shadow:0 0 6px rgba(255,255,255,.7);
+  transform:rotate(45deg);animation:seedFly linear forwards}
+@keyframes seedFly{0%{opacity:0;transform:translate(0,0) rotate(45deg) scale(.4)}
+  15%{opacity:1}100%{opacity:.9;transform:translate(var(--sx),var(--sy)) rotate(405deg) scale(1)}}
+.island-fly{position:absolute;top:50%;width:130px;height:130px;border-radius:50% 50% 46% 46%;display:flex;align-items:center;justify-content:center;font-size:50px;
+  box-shadow:inset 0 -10px 20px rgba(0,0,0,.1),var(--shadow);transition:left 2.4s cubic-bezier(.5,0,.2,1),right 2.4s cubic-bezier(.5,0,.2,1)}
+.collision-glow{position:absolute;left:50%;top:50%;width:10px;height:10px;border-radius:50%;transform:translate(-50%,-50%);
+  background:radial-gradient(circle,#fff,rgba(255,230,160,.6) 40%,transparent 70%);opacity:0}
+.collision-glow.go{animation:glow .9s ease-out forwards}
+@keyframes glow{0%{opacity:0;width:10px;height:10px}40%{opacity:1}100%{opacity:0;width:520px;height:520px}}
+.particle{position:absolute;left:50%;top:50%;width:8px;height:8px;border-radius:50%;opacity:0}
+.particle.go{animation:part .9s ease-out forwards}
+@keyframes part{0%{opacity:1;transform:translate(-50%,-50%) scale(1)}100%{opacity:0;transform:translate(calc(-50% + var(--px)),calc(-50% + var(--py))) scale(.3)}}
+.seed-hand{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);text-align:center;animation:handIn .6s cubic-bezier(.34,1.56,.64,1) both}
+@keyframes handIn{from{opacity:0;transform:translate(-50%,-30%) scale(.6)}to{opacity:1;transform:translate(-50%,-50%) scale(1)}}
+.seed-hand .s{font-size:60px;display:inline-block;animation:drop 1.4s ease-in-out infinite}
+@keyframes drop{0%,100%{transform:translateY(0)}50%{transform:translateY(10px)}}
+
+/* ===== Toast ===== */
+#toast{position:fixed;left:50%;bottom:96px;transform:translateX(-50%);z-index:300;display:flex;flex-direction:column;gap:8px;align-items:center;pointer-events:none}
+.toast{background:rgba(58,74,66,.92);color:#fff;padding:10px 18px;border-radius:30px;font-size:13px;box-shadow:var(--shadow-lg);
+  animation:toastIn .3s both,toastOut .3s 2.7s forwards;max-width:90vw}
+@keyframes toastIn{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
+@keyframes toastOut{to{opacity:0;transform:translateY(-8px)}}
+
+/* ===== 空状态/提示 ===== */
+.empty{text-align:center;padding:46px 20px;color:var(--ink-soft)}
+.empty .em{font-size:46px;margin-bottom:10px}
+.disclaimer{background:var(--rose-soft);border:1px solid #f0cdd3;border-radius:var(--radius-sm);padding:14px;font-size:12.5px;color:#a45a64;margin-top:18px;line-height:1.6}
+.disclaimer b{color:#c0392b}
+.section-title{font-size:17px;color:var(--sage-deep);margin:18px 4px 10px;display:flex;align-items:center;gap:8px}
+.muted{color:var(--ink-faint);font-size:12px}
+.row{display:flex;gap:10px;flex-wrap:wrap}
+.spread{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.unread-dot{display:inline-flex;min-width:18px;height:18px;padding:0 5px;border-radius:9px;background:var(--rose);color:#fff;font-size:11px;align-items:center;justify-content:center;font-weight:700}
+.link-back{font-size:13px;color:var(--sage-deep);font-weight:600;cursor:pointer}
+.slug-box{background:var(--cream-2);border:1px dashed var(--line);border-radius:var(--radius-sm);padding:10px 12px;font-size:12px;color:var(--ink-soft);word-break:break-all;margin-top:6px}
+</style>
+</head>
+<body>
+
+<!-- 漂浮背景层 -->
+<div class="sky" id="sky"></div>
+<div class="wave"></div>
+
+<!-- 顶部栏 -->
+<header class="topbar">
+  <a class="brand" href="../index.html" title="返回语滞首页">
+    <b>拾光信箱</b><small>心灵漂流 · Yuzhi</small>
+  </a>
+  <div class="identity" id="identity" title="你的匿名身份"></div>
+</header>
+
+<!-- 主体视图 -->
+<main id="app"></main>
+
+<!-- 写信悬浮按钮 -->
+<button class="fab" onclick="openComposer()" title="写一封信">✍️</button>
+
+<!-- 底部导航 -->
+<nav class="tabbar" id="tabbar">
+  <button class="tab on" data-view="home" onclick="goView('home')"><span class="ic">🏠</span>首页</button>
+  <button class="tab" data-view="dandelion" onclick="goView('dandelion')"><span class="ic">🌼</span>蒲公英</button>
+  <button class="tab" data-view="island" onclick="goView('island')"><span class="ic">🏝️</span>岛屿</button>
+  <button class="tab" data-view="treehole" onclick="goView('treehole')"><span class="ic">🌳</span>树洞</button>
+  <button class="tab" data-view="mailbox" onclick="goView('mailbox')"><span class="ic">📮</span>信箱</button>
+</nav>
+
+<!-- 写信弹窗 -->
+<div class="modal" id="composer-modal">
+  <div class="sheet">
+    <div class="sheet-head">
+      <h2>写一封信</h2>
+      <button class="x" onclick="closeComposer()">×</button>
+    </div>
+    <div class="mode-tabs" id="composer-modes"></div>
+    <div class="field">
+      <label>标题（可选）</label>
+      <input type="text" id="c-title" maxlength="40" placeholder="给这封信起个小标题…">
+    </div>
+    <div class="field">
+      <label>正文（必填）</label>
+      <textarea id="c-body" rows="6" maxlength="5000" placeholder="把心里的话慢慢写下来，这里没有人认识你。" oninput="document.getElementById('c-count').textContent=this.value.length+' / 5000'"></textarea>
+      <div class="hint" id="c-count">0 / 5000</div>
+    </div>
+    <div class="field">
+      <label>此刻的心情</label>
+      <div class="chips" id="c-moods"></div>
+    </div>
+    <div class="field">
+      <label>信纸底色</label>
+      <div class="papers" id="c-papers"></div>
+    </div>
+    <button class="btn btn-block btn-apricot" onclick="submitComposer()">送出这封信 →</button>
+  </div>
+</div>
+
+<!-- 全屏动画层 -->
+<div id="fx"></div>
+<!-- Toast容器 -->
+<div id="toast"></div>
+
+<script>
+/* =====================================================================
+   1. 常量与配置
+   ===================================================================== */
+const STORE = {
+  ANON:"yuzhi_drift_anon",
+  ISLANDS:"yuzhi_drift_islands",
+  TREEHOLE:"yuzhi_drift_treehole",
+  MAILBOXES:"yuzhi_drift_mailboxes",
+  CONV:"yuzhi_drift_conversations",
+  BOTTLES:"yuzhi_drift_public_bottles",     // 岛屿漂流瓶公开区
+  POSTS:"yuzhi_drift_public_posts",         // 常规公开板
+  LIKES:"yuzhi_drift_likes",                // 点赞状态 map
+  SETTINGS:"yuzhi_drift_settings",
+  SEED:"yuzhi_drift_seeded"
+};
+// 可能遗留的旧版键（仅读取兼容，绝不覆盖）
+const LEGACY_KEYS = ["yuzhi_treehole","treehole_posts","anonymous_letters","mailbox_questions","yuzhi_anon","anonymous_name","anon_name"];
+
+const MOOD_TAGS = ["迷茫","开心","需要拥抱","焦虑","感恩","孤单","释怀","平静"];
+const PAPER_COLORS = [
+  {name:"奶油白", bg:"#fdfaf3"},
+  {name:"鼠尾草", bg:"#e3f0e8"},
+  {name:"暖杏色", bg:"#fbeede"},
+  {name:"雾蓝色", bg:"#e6eef5"},
+  {name:"藕粉色", bg:"#f7e9ee"},
+  {name:"月光黄", bg:"#fbf6df"}
+];
+const ISLAND_THEMES = [
+  {key:"贝壳沙滩", em:"🐚", cls:"theme-贝壳沙滩"},
+  {key:"月光海岸", em:"🌙", cls:"theme-月光海岸"},
+  {key:"秘密花园", em:"🌿", cls:"theme-秘密花园"},
+  {key:"星河孤岛", em:"✨", cls:"theme-星河孤岛"}
+];
+// 心情/关键词词典：用于岛屿共鸣匹配
+const KEYWORDS = [
+  {c:"迷茫", re:/(迷茫|迷惘|不知道|没方向)/},
+  {c:"孤单", re:/(孤单|孤独|一个人|没人陪|寂寞)/},
+  {c:"焦虑", re:/(焦虑|不安|紧张|慌张|害怕)/},
+  {c:"压力", re:/(压力|好累|疲惫|喘不过气|崩溃边缘)/},
+  {c:"开心", re:/(开心|快乐|喜悦|高兴|幸福|满足)/},
+  {c:"感恩", re:/(感恩|感谢|谢谢|知足|温暖)/},
+  {c:"释怀", re:/(释怀|放下|和解|告别|翻篇)/},
+  {c:"需要拥抱", re:/(拥抱|抱抱|想被爱|被理解)/},
+  {c:"难过", re:/(难过|伤心|想哭|眼泪|失落)/},
+  {c:"勇气", re:/(勇气|勇敢|迈出|面对)/},
+  {c:"希望", re:/(希望|光|未来|明天|期待)/},
+  {c:"委屈", re:/(委屈|不公平|冤枉|不被理解)/}
+];
+const AVATARS = ["🌟","🌿","🌼","🍃","🐚","🌙","⭐","🍂","🌈","🕊️","🌻","🫧","🍀","🌸"];
+const ADJ = ["流浪","夜航","搁浅","沉默","迟到","迷路","温暖","安静","勇敢","透明","晚归","初醒","远方","微光","听风","拾光"];
+const NOUN = ["的云","的鲸","的猫","的信","的雾","的船","的灯","的风","的钟","的星","的岛","的叶","的月","的鹿","的浪","的萤"];
+
+/* =====================================================================
+   2. 存储与工具函数
+   ===================================================================== */
+function safeGet(key, fallback){
+  try{ const v = localStorage.getItem(key); return v==null?fallback:JSON.parse(v); }
+  catch(e){ return fallback; }
+}
+function safeSet(key, val){
+  try{ localStorage.setItem(key, JSON.stringify(val)); }catch(e){ console.warn("存储失败",e); }
+}
+function genId(){ return Date.now().toString(36)+Math.random().toString(36).slice(2,7); }
+function nowISO(){ return new Date().toISOString(); }
+function escapeHtml(s){
+  return String(s==null?"":s).replace(/[&<>"']/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+}
+// 时间格式：流浪的云#4231 · 2026.8.5 10:22
+function fmtTime(iso){
+  const d = new Date(iso);
+  const p = n=>String(n).padStart(2,"0");
+  return `${d.getFullYear()}.${d.getMonth()+1}.${d.getDate()} ${p(d.getHours())}:${p(d.getMinutes())}`;
+}
+function relTime(iso){
+  const diff = Date.now()-new Date(iso).getTime();
+  const m = Math.floor(diff/60000);
+  if(m<1) return "刚刚";
+  if(m<60) return m+" 分钟前";
+  const h=Math.floor(m/60); if(h<24) return h+" 小时前";
+  const day=Math.floor(h/24); if(day<30) return day+" 天前";
+  return fmtTime(iso);
+}
+function extractKeywords(text){
+  const s = (text||"");
+  const set = new Set();
+  KEYWORDS.forEach(k=>{ if(k.re.test(s)) set.add(k.c); });
+  return set;
+}
+function similarity(aTags, aText, bTags, bText){
+  const ka = new Set([...(aTags||[]), ...extractKeywords(aText)]);
+  const kb = new Set([...(bTags||[]), ...extractKeywords(bText)]);
+  let overlap=0; ka.forEach(t=>{ if(kb.has(t)) overlap++; });
+  // 心情标签精确匹配加权
+  let moodHit=0;
+  (aTags||[]).forEach(t=>{ if((bTags||[]).includes(t)) moodHit++; });
+  return overlap*2 + moodHit*3;
+}
+
+/* =====================================================================
+   3. 匿名身份（自动生成 + 兼容旧键）
+   ===================================================================== */
+let ANON = null;
+function avatarFor(seed){
+  // 由昵称种子稳定地挑一个头像
+  let h=0; for(let i=0;i<seed.length;i++) h=(h*31+seed.charCodeAt(i))>>>0;
+  return AVATARS[h%AVATARS.length];
+}
+function ensureAnon(){
+  // 优先读取本应用键；兼容旧版可能的匿名名
+  let a = safeGet(STORE.ANON, null);
+  if(a && a.id && a.name){ ANON = a; return; }
+  // 兼容旧键
+  const legacyName = safeGet("yuzhi_anon",null) || safeGet("anonymous_name",null) || safeGet("anon_name",null);
+  const adj = ADJ[Math.floor(Math.random()*ADJ.length)];
+  const noun = NOUN[Math.floor(Math.random()*NOUN.length)];
+  const num = Math.floor(1000+Math.random()*9000);
+  const name = (legacyName ? String(legacyName).slice(0,8) : adj+noun) + "#" + num;
+  ANON = { id: genId(), name, avatar: avatarFor(name), createdAt: nowISO() };
+  safeSet(STORE.ANON, ANON);
+}
+function renderIdentity(){
+  const el = document.getElementById("identity");
+  el.innerHTML = `<div class="avatar">${ANON.avatar}</div><span class="nm">${escapeHtml(ANON.name)}</span>`;
+  el.onclick = ()=> toast("你的匿名身份：" + ANON.name);
+}
+
+/* =====================================================================
+   4. 数据读取助手
+   ===================================================================== */
+function getIslands(){ return safeGet(STORE.ISLANDS, []); }
+function getTreehole(){ return safeGet(STORE.TREEHOLE, []); }
+function getMailboxes(){ return safeGet(STORE.MAILBOXES, []); }
+function getConvs(){ return safeGet(STORE.CONV, []); }
+function getBottles(){ return safeGet(STORE.BOTTLES, []); }
+function getPosts(){ return safeGet(STORE.POSTS, []); }
+function getLikes(){ return safeGet(STORE.LIKES, {}); }
+
+/* =====================================================================
+   5. 种子数据（机器人陌生人，让应用立即可用）
+   ===================================================================== */
+function seedIfNeeded(){
+  if(safeGet(STORE.SEED, false)) return;
+  // 树洞种子
+  const treeSeeds = [
+    {title:"今天莫名想哭", body:"也不知道为什么，下班路上突然鼻子一酸。好像一切都还好，又好像什么都不太好。", mood:"难过", tags:["难过","孤单"]},
+    {title:"我好像慢慢好起来了", body:"停药第三周，今天第一次主动出门晒了太阳。释怀两个字，原来真的需要时间。", mood:"释怀", tags:["释怀","希望"]},
+    {title:"压力好大", body:"考研和家里催婚撞在一起了，最近总是失眠，凌晨三点还醒着。", mood:"焦虑", tags:["压力","焦虑","迷茫"]},
+    {title:"谢谢那个陌生人", body:"上周在便利店摔了一跤，有个姐姐扶我起来还帮我捡东西。想借这里说声感恩。", mood:"感恩", tags:["感恩","温暖"]},
+    {title:"一个人也挺好", body:"搬出来住半年了，学会了一个人吃饭、看电影、过周末。孤单但不空虚。", mood:"孤单", tags:["孤单","平静"]},
+    {title:"想要一个拥抱", body:"加班到十一点，走出写字楼风很大。突然很想有人拍拍我的肩说没事。", mood:"需要拥抱", tags:["需要拥抱","疲惫"]}
+  ];
+  // 岛屿种子（含不同情绪关键词，便于共鸣匹配）
+  const islandSeeds = [
+    {name:"半山的雾", theme:"秘密花园", voiceTitle:"我总觉得自己不够好", voiceBody:"明明已经很努力了，却还是怕被看到真实的那一面。温柔地对待别人，却忘了自己也需要被温柔。", mood:"迷茫", tags:["迷茫","孤单","委屈"]},
+    {name:"搁浅的船", theme:"贝壳沙滩", voiceTitle:"撑了太久，想歇一歇", voiceBody:"像一直被浪推着走，不敢停。其实我只是想有人告诉我，累了也没关系。", mood:"焦虑", tags:["压力","焦虑","需要拥抱"]},
+    {name:"迟来的风", theme:"月光海岸", voiceTitle:"慢慢学会了和解", voiceBody:"和父母的关系不再紧绷了。原来释怀不是忘记，是终于能平静提起。", mood:"释怀", tags:["释怀","感恩","希望"]},
+    {name:"夜航的鲸", theme:"星河孤岛", voiceTitle:"一个人也可以发光", voiceBody:"独居第三年，把小日子过得有滋有味。孤单是自由的另一面。", mood:"孤单", tags:["孤单","平静","勇气"]},
+    {name:"未寄的信", theme:"秘密花园", voiceTitle:"想把谢谢说出口", voiceBody:"遇见过很多善意，却总不好意思表达。今天想练习感恩，对这个世界说声谢谢。", mood:"感恩", tags:["感恩","温暖","希望"]}
+  ];
+  // 蒲公英漂流池（等待被匹配的陌生人来信）
+  const dandelionSeeds = [
+    {body:"你好呀，我是刚飘过来的种子。如果你也睡不着，我们就随便聊聊吧。", mood:"孤单", tags:["孤单","平静"]},
+    {body:"今天发生了一件小小开心的事，想分享给某个素未谋面的你：楼下的猫蹭了我的腿。", mood:"开心", tags:["开心","温暖"]},
+    {body:"最近有点迷茫，不知道自己想要什么。如果你也在找方向，我们或许能互相照亮。", mood:"迷茫", tags:["迷茫","焦虑"]},
+    {body:"刚结束一段很难的关系，正在学习如何好好爱自己。想给同样在路上的人一个拥抱。", mood:"需要拥抱", tags:["需要拥抱","释怀"]}
+  ];
+
+  const bots = [];
+  // 生成匿名机器人
+  function bot(name){
+    const b = {id:genId(), name, avatar:avatarFor(name)};
+    bots.push(b); return b;
+  }
+  // 树洞
+  const th = getTreehole();
+  treeSeeds.forEach((s,i)=>{
+    const b = bot(ADJ[(i*3)%ADJ.length]+NOUN[(i*5)%NOUN.length]+"#"+(1000+i*37));
+    th.push({id:genId(), fromId:b.id, fromName:b.name, fromAvatar:b.avatar, title:s.title, body:s.body,
+      mood:s.mood, paper:PAPER_COLORS[i%PAPER_COLORS.length].bg, tags:s.tags, revealed:true, createdAt:nowISO(), comments:seedComments(b)});
+  });
+  safeSet(STORE.TREEHOLE, th);
+  // 岛屿
+  const isl = getIslands();
+  islandSeeds.forEach((s,i)=>{
+    const b = bot(ADJ[(i*2+1)%ADJ.length]+NOUN[(i*4+2)%NOUN.length]+"#"+(2000+i*53));
+    isl.push({id:genId(), ownerId:b.id, ownerName:b.name, ownerAvatar:b.avatar, name:s.name, theme:s.theme,
+      voiceTitle:s.voiceTitle, voiceBody:s.voiceBody, mood:s.mood, tags:s.tags, paper:PAPER_COLORS[i%PAPER_COLORS.length].bg,
+      status:"waiting", matchedTo:null, beach:[], createdAt:nowISO()});
+  });
+  safeSet(STORE.ISLANDS, isl);
+  // 蒲公英池（存为"待飘送"信件，含发信机器人）
+  const conv = getConvs();
+  dandelionSeeds.forEach((s,i)=>{
+    const b = bot(ADJ[(i*5+3)%ADJ.length]+NOUN[(i*2+1)%NOUN.length]+"#"+(3000+i*29));
+    conv.push({id:genId(), mode:"dandelion", pool:true, fromId:b.id, fromName:b.name, fromAvatar:b.avatar,
+      body:s.body, mood:s.mood, tags:s.tags, createdAt:nowISO(), taken:false});
+  });
+  safeSet(STORE.CONV, conv);
+  // 公开板种子
+  const posts = getPosts();
+  posts.push({id:genId(), fromName:"晚归的灯#5512", fromAvatar:"🏮", title:"致每一个晚睡的人", body:"夜还长，但你不是一个人醒着。愿你被温柔以待。", mood:"温暖", paper:PAPER_COLORS[1].bg, tags:["温暖","孤单"], createdAt:nowISO(), comments:[]});
+  safeSet(STORE.POSTS, posts);
+
+  safeSet(STORE.SEED, true);
+}
+function seedComments(author){
+  // 为种子树洞生成一两条示范评论
+  return [{
+    id:genId(), authorId:genId(), authorName:"巷口的猫#8821", authorAvatar:"🐈", emoji:"🤗",
+    content:"抱抱你，说出来就轻一点了。", createdAt:nowISO(), likes:3, replies:[]
+  }];
+}
+
+/* =====================================================================
+   6. 兼容旧版数据（读取不报错，不覆盖）
+   ===================================================================== */
+function migrateLegacy(){
+  // 仅做安全读取演示：若存在旧树洞数组，导入到新结构（revealed=true），标记来源
+  LEGACY_KEYS.forEach(k=>{
+    const v = safeGet(k, null);
+    if(Array.isArray(v) && v.length){
+      const th = getTreehole();
+      const before = th.length;
+      v.slice(0,20).forEach(old=>{
+        if(!old || typeof old!=="object") return;
+        th.push({
+          id:genId(), fromId:"legacy", fromName:old.anonymous_name||old.name||"旧时光的旅人",
+          fromAvatar:"🌫️", title:old.title||"旧信", body:old.content||old.body||"",
+          mood:old.mood||"平静", paper:PAPER_COLORS[2].bg, tags:Array.isArray(old.tags)?old.tags:[],
+          revealed:true, createdAt:old.created_at||old.createdAt||nowISO(), comments:[], legacy:true
+        });
+      });
+      if(th.length>before) safeSet(STORE.TREEHOLE, th);
+    }
+  });
+}
+
+/* =====================================================================
+   7. 路由器 / 视图切换
+   ===================================================================== */
+let CURRENT = "home";
+function goView(v){
+  CURRENT = v;
+  document.querySelectorAll(".tab").forEach(t=>t.classList.toggle("on", t.dataset.view===v));
+  if(v==="home") renderHome();
+  else if(v==="dandelion") renderDandelion();
+  else if(v==="island") renderIsland();
+  else if(v==="treehole") renderTreehole();
+  else if(v==="mailbox") renderMailbox();
+  window.scrollTo({top:0,behavior:"smooth"});
+}
+
+/* =====================================================================
+   8. 主页
+   ===================================================================== */
+function unreadCounts(){
+  const convs = getConvs().filter(c=>!c.pool);
+  const d = convs.filter(c=>c.mode==="dandelion" && (c.unread&&c.unread[ANON.id])).reduce((s,c)=>s+(c.unread[ANON.id]||0),0);
+  const isl = getIslands().find(i=>i.ownerId===ANON.id && i.status==="matched");
+  let islandUnread=0;
+  if(isl){
+    const c = convs.find(c=>c.mode==="island" && c.islandId===isl.id);
+    if(c && c.unread && c.unread[ANON.id]) islandUnread = c.unread[ANON.id];
+    islandUnread += (isl.beach||[]).filter(m=>!m.read && m.fromId!==ANON.id).length;
+  }
+  const th = getTreehole().filter(t=>!t.isMine && new Date(t.createdAt).getTime() > (lastVisit("treehole"))).length;
+  const mb = getMailboxes().find(m=>m.ownerId===ANON.id);
+  const mailboxUnread = mb ? mb.questions.filter(q=>q.status==="pending").length : 0;
+  return {dandelion:d, island:islandUnread, treehole:th, mailbox:mailboxUnread};
+}
+function lastVisit(key){
+  const s = safeGet(STORE.SETTINGS,{});
+  return s["visit_"+key] || 0;
+}
+function markVisit(key){
+  const s = safeGet(STORE.SETTINGS,{});
+  s["visit_"+key] = Date.now();
+  safeSet(STORE.SETTINGS, s);
+}
+function badge(n){ return n>0 ? `<span class="badge">${n>99?"99+":n}</span>` : ""; }
+
+function renderHome(){
+  const u = unreadCounts();
+  markVisit("home");
+  const app = document.getElementById("app");
+  app.innerHTML = `
+    <div class="view">
+      <div class="hero">
+        <h1>把心里话，交给风</h1>
+        <p>有些话说不出口，不代表不想说。选一种方式，把心事轻轻放出去——总会有人，温柔接住。</p>
+      </div>
+      <div class="modes">
+        <div class="mode-card dandelion" onclick="goView('dandelion')">
+          <div class="glow"></div>${badge(u.dandelion)}
+          <div class="art">🌼</div>
+          <h3>蒲公英模式</h3>
+          <p>写一封信，让它飘向远方的陌生灵魂，开始一对一的匿名对话。</p>
+        </div>
+        <div class="mode-card island" onclick="goView('island')">
+          <div class="glow"></div>${badge(u.island)}
+          <div class="art">🏝️</div>
+          <h3>岛屿模式</h3>
+          <p>建造你的心灵岛屿，与情绪同频的另一座岛温柔相撞、彼此共鸣。</p>
+        </div>
+        <div class="mode-card treehole" onclick="goView('treehole')">
+          <div class="glow"></div>${badge(u.treehole)}
+          <div class="art">🌳</div>
+          <h3>迷树洞模式</h3>
+          <p>把心事藏进发光树洞，慢慢挖掘，读陌生的故事，留温柔的评论。</p>
+        </div>
+        <div class="mode-card mailbox" onclick="goView('mailbox')">
+          <div class="glow"></div>${badge(u.mailbox)}
+          <div class="art">📮</div>
+          <h3>常规信箱</h3>
+          <p>创建专属信箱收集匿名提问，或去公共板说说心里话。</p>
+        </div>
+      </div>
+      <div class="disclaimer">
+        <b>重要说明：</b>本应用是表达与倾诉的陪伴空间，<b>不提供医疗诊断、治疗或专业心理咨询</b>。
+        如你正经历情绪危机或有伤害自己的念头，请拨打心理援助热线 <b>12356</b> 或 <b>400-161-9995</b>。
+      </div>
+    </div>`;
+}
+
+/* =====================================================================
+   9. 写信弹窗
+   ===================================================================== */
+let DRAFT = { mode:"dandelion", mood:null, paper:PAPER_COLORS[0].bg };
+function openComposer(prefillMode){
+  DRAFT = { mode:prefillMode||"dandelion", mood:null, paper:PAPER_COLORS[0].bg };
+  // 模式选择
+  const mt = document.getElementById("composer-modes");
+  const modes = [["dandelion","🌼 蒲公英"],["island","🏝️ 岛屿"],["treehole","🌳 树洞"],["mailbox","📮 信箱"]];
+  mt.innerHTML = modes.map(m=>`<div class="mode-tab ${m[0]===DRAFT.mode?'on':''}" data-m="${m[0]}" onclick="pickComposerMode('${m[0]}')">${m[1]}</div>`).join("");
+  // 心情
+  document.getElementById("c-moods").innerHTML = MOOD_TAGS.map(t=>`<div class="chip" data-m="${t}" onclick="pickMoodChip(this,'${t}')">${t}</div>`).join("");
+  // 信纸
+  document.getElementById("c-papers").innerHTML = PAPER_COLORS.map((p,i)=>`<div class="paper ${i===0?'on':''}" data-bg="${p.bg}" style="background:${p.bg}" title="${p.name}" onclick="pickPaper(this,'${p.bg}')"></div>`).join("");
+  document.getElementById("c-title").value="";
+  document.getElementById("c-body").value="";
+  document.getElementById("c-count").textContent="0 / 5000";
+  document.getElementById("composer-modal").classList.add("show");
+}
+function closeComposer(){ document.getElementById("composer-modal").classList.remove("show"); }
+function pickComposerMode(m){ DRAFT.mode=m; document.querySelectorAll("#composer-modes .mode-tab").forEach(t=>t.classList.toggle("on",t.dataset.m===m)); }
+function pickMoodChip(el,t){ DRAFT.mood = (DRAFT.mood===t?null:t); el.classList.toggle("on", DRAFT.mood===t); }
+function pickPaper(el,bg){ DRAFT.paper=bg; document.querySelectorAll("#c-papers .paper").forEach(p=>p.classList.toggle("on",p.dataset.bg===bg)); }
+
+function submitComposer(){
+  const title = document.getElementById("c-title").value.trim();
+  const body = document.getElementById("c-body").value.trim();
+  if(!body){ toast("写点什么再送出吧～"); return; }
+  const letter = { title, body, mood:DRAFT.mood, paper:DRAFT.paper, mode:DRAFT.mode, tags:DRAFT.mood?[DRAFT.mood]:[] };
+  closeComposer();
+  deliver(letter);
+}
+
+/* =====================================================================
+   10. 投递分发（按模式进入不同流程）
+   ===================================================================== */
+function deliver(letter){
+  if(letter.mode==="dandelion") sendDandelion(letter);
+  else if(letter.mode==="island") startIslandFlow(letter);
+  else if(letter.mode==="treehole") sendTreehole(letter);
+  else if(letter.mode==="mailbox") sendPublicPost(letter);
+}
+
+/* ---- 10.1 蒲公英模式 ---- */
+function sendDandelion(letter){
+  const pool = getConvs().filter(c=>c.pool && !c.taken);
+  if(!pool.length){ toast("此刻风平浪静，稍后再来试试？"); return; }
+  const match = pool[Math.floor(Math.random()*pool.length)];
+  // 标记被领取
+  let convs = getConvs();
+  convs = convs.map(c=> c.id===match.id ? {...c, taken:true} : c);
+  // 创建对话
+  const conv = {
+    id:genId(), mode:"dandelion",
+    participants:[{id:ANON.id,name:ANON.name,avatar:ANON.avatar},{id:match.fromId,name:match.fromName,avatar:match.fromAvatar}],
+    messages:[
+      {fromId:ANON.id, fromName:ANON.name, fromAvatar:ANON.avatar, content:letter.body, createdAt:nowISO()},
+      {fromId:match.fromId, fromName:match.fromName, fromAvatar:match.fromAvatar, content:match.body, createdAt:nowISO()}
+    ],
+    createdAt:nowISO(), unread:{}
+  };
+  convs.push(conv);
+  safeSet(STORE.CONV, convs);
+  // 蒲公英飘散动画 → 进入对话
+  playDandelionScatter(()=>{
+    toast("🌼 你的信乘着风，飘向了远方");
+    goView("dandelion");
+    setTimeout(()=>openConversation(conv.id, true), 400);
+  });
+}
+function renderDandelion(){
+  markVisit("dandelion");
+  const convs = getConvs().filter(c=>c.mode==="dandelion" && !c.pool);
+  const app = document.getElementById("app");
+  if(!convs.length){
+    app.innerHTML = `
+      <div class="view">
+        <div class="spread"><h2 style="font-size:19px;color:var(--sage-deep)">🌼 蒲公英信箱</h2>
+          <span class="link-back" onclick="goView('home')">← 首页</span></div>
+        <div class="empty"><div class="em">🌬️</div>
+          <p>还没有飘出去的信。写一封，让它带你去遇见某个陌生灵魂。</p>
+          <button class="btn btn-apricot mt-8" onclick="openComposer('dandelion')">✍️ 写一封蒲公英信</button>
+        </div>
+      </div>`;
+    return;
+  }
+  convs.sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt));
+  app.innerHTML = `
+    <div class="view">
+      <div class="spread"><h2 style="font-size:19px;color:var(--sage-deep)">🌼 蒲公英信箱</h2>
+        <span class="link-back" onclick="goView('home')">← 首页</span></div>
+      <button class="btn btn-apricot btn-block mt-8 mb-14" onclick="openComposer('dandelion')">✍️ 写一封，飘向远方</button>
+      <div id="conv-list">
+        ${convs.map(c=>{
+          const other = c.participants.find(p=>p.id!==ANON.id);
+          const last = c.messages[c.messages.length-1];
+          const unread = (c.unread && c.unread[ANON.id])||0;
+          return `<div class="letter" style="cursor:pointer" onclick="openConversation('${c.id}')">
+            <div class="lh"><span class="nm">${other.avatar} ${escapeHtml(other.name)} ${unread?'<span class="unread-dot">'+unread+'</span>':''}</span>
+              <span class="tm">${relTime(c.createdAt)}</span></div>
+            <div class="ctext" style="font-size:14px;color:var(--ink-soft)">${escapeHtml((last?last.content:'').slice(0,40))}${(last&&last.content.length>40)?'…':''}</div>
+          </div>`;
+        }).join("")}
+      </div>
+    </div>`;
+}
+function openConversation(convId, justMatched){
+  const convs = getConvs();
+  const c = convs.find(x=>x.id===convId);
+  if(!c) return;
+  // 清除未读
+  if(c.unread && c.unread[ANON.id]){ c.unread[ANON.id]=0; safeSet(STORE.CONV, convs); }
+  const other = c.participants.find(p=>p.id!==ANON.id);
+  const app = document.getElementById("app");
+  app.innerHTML = `
+    <div class="view">
+      <div class="spread"><span class="link-back" onclick="goView('dandelion')">← 返回</span>
+        <span class="nm" style="font-size:13px;color:var(--sage-deep)">${other.avatar} ${escapeHtml(other.name)}</span></div>
+      <div class="card" style="margin-top:12px">
+        <div class="chatbox" id="chatbox">
+          ${c.messages.map(m=>msgHtml(m,c)).join("")}
+        </div>
+        <div class="chat-input">
+          <input id="chat-in" type="text" placeholder="轻轻说点什么…" maxlength="1000" onkeydown="if(event.key==='Enter')sendChat('${c.id}')">
+          <button class="btn btn-sm" onclick="sendChat('${c.id}')">发送</button>
+        </div>
+      </div>
+      ${justMatched?'<div class="muted" style="text-align:center">🌼 这是只属于你们两人的对话，温柔一点。</div>':''}
+    </div>`;
+  document.getElementById("chatbox").scrollTop = 1e9;
+}
+function msgHtml(m,c){
+  const mine = m.fromId===ANON.id;
+  return `<div class="conv ${mine?'me':'them'}"><div class="avatar" style="width:30px;height:30px;font-size:15px">${mine?ANON.avatar:m.fromAvatar}</div>
+    <div class="bubble">${escapeHtml(m.content)}</div></div>`;
+}
+function sendChat(convId){
+  const inp = document.getElementById("chat-in");
+  const text = inp.value.trim();
+  if(!text) return;
+  const convs = getConvs();
+  const c = convs.find(x=>x.id===convId);
+  if(!c) return;
+  c.messages.push({fromId:ANON.id, fromName:ANON.name, fromAvatar:ANON.avatar, content:text, createdAt:nowISO()});
+  safeSet(STORE.CONV, convs);
+  renderChatAppend(c, {fromId:ANON.id, fromName:ANON.name, fromAvatar:ANON.avatar, content:text, createdAt:nowISO()});
+  inp.value="";
+  // 机器人延时回信（种子落手提醒）
+  setTimeout(()=>{
+    const other = c.participants.find(p=>p.id!==ANON.id);
+    const reply = botReply(text, other.name);
+    const cc = getConvs(); const cur = cc.find(x=>x.id===convId);
+    if(!cur) return;
+    cur.messages.push({fromId:other.id, fromName:other.name, fromAvatar:other.avatar, content:reply, createdAt:nowISO()});
+    cur.unread = cur.unread||{}; cur.unread[ANON.id]=(cur.unread[ANON.id]||0)+1;
+    safeSet(STORE.CONV, cc);
+    if(CURRENT==="dandelion" && document.querySelector(".chatbox")){
+      renderChatAppend(cur, {fromId:other.id, fromName:other.name, fromAvatar:other.avatar, content:reply, createdAt:nowISO()});
+    }
+    playSeedHand(()=> toast("🌱 一粒种子落到手心：" + other.name + " 回信了"));
+  }, 2600+Math.random()*2200);
+}
+function renderChatAppend(c, m){
+  const box = document.getElementById("chatbox");
+  if(!box) return;
+  const div = document.createElement("div");
+  div.innerHTML = msgHtml(m,c);
+  box.appendChild(div.firstElementChild);
+  box.scrollTop = 1e9;
+}
+function botReply(userText, otherName){
+  const t = (userText||"");
+  if(/(难过|哭|累|崩|焦虑|压力|迷茫)/.test(t)) return "我在听。你愿意说更多，我就愿意一直陪着。慢慢来，不急。";
+  if(/(开心|好|谢谢|感恩|幸福)/.test(t)) return "真好呀，替你开心～ 这种小确幸要好好收着。";
+  if(/(孤独|一个人|没人|寂寞)/.test(t)) return "至少这一刻，你不是一个人。我在这里。";
+  if(/(抱|暖|爱)/.test(t)) return "（轻轻回抱你）你值得被温柔对待。";
+  const pool=["嗯，我懂那种感觉。","说得真好，我也常被这样触动。","谢谢你愿意告诉我这些。","风会把心意带到的，我们慢慢聊。","抱抱你，你已经在努力了。"];
+  return pool[Math.floor(Math.random()*pool.length)];
+}
+
+/* ---- 10.2 岛屿模式 ---- */
+let ISLAND_DRAFT = null;
+function startIslandFlow(letter){
+  const mine = getIslands().find(i=>i.ownerId===ANON.id);
+  if(!mine){
+    // 需要创建岛屿：先填名字+主题，再写心声并匹配
+    showIslandSetup(letter, null);
+  } else {
+    // 已有岛屿：询问是否用新心声重新寻找共鸣
+    showIslandSetup(letter, mine);
+  }
+}
+function showIslandSetup(letter, existing){
+  // 初始化主题选择，避免沿用默认值导致已有主题丢失
+  ISLAND_THEME = existing ? existing.theme : ISLAND_THEMES[0].key;
+  // 复用写信弹窗样式做一个岛屿建立弹窗
+  const modal = document.getElementById("composer-modal");
+  const sheet = modal.querySelector(".sheet");
+  const old = sheet.innerHTML;
+  sheet.dataset.old = old;
+  sheet.innerHTML = `
+    <div class="sheet-head"><h2>${existing?'重新写下心声':'建造你的心灵岛屿'}</h2><button class="x" onclick="restoreComposer()">×</button></div>
+    <div class="field"><label>给岛屿取个名字</label>
+      <input type="text" id="isl-name" maxlength="20" value="${existing?escapeHtml(existing.name):''}" placeholder="例如：半山的雾"></div>
+    <div class="field"><label>选择岛屿主题</label>
+      <div class="theme-pick" id="isl-themes">
+        ${ISLAND_THEMES.map((t,i)=>`<div class="theme-opt ${existing&&existing.theme===t.key?'on':(i===0&&!existing?'on':'')}" data-k="${t.key}" onclick="pickTheme(this,'${t.key}')">
+          <div class="sw ${t.cls}">${t.em}</div>${t.key}</div>`).join("")}
+      </div></div>
+    <div class="field"><label>岛之心声 · 标题</label>
+      <input type="text" id="isl-vtitle" maxlength="30" value="${existing?escapeHtml(existing.voiceTitle):escapeHtml(letter.title)}" placeholder="一句话说出心里的声音"></div>
+    <div class="field"><label>岛之心声 · 正文</label>
+      <textarea id="isl-vbody" rows="5" maxlength="5000" placeholder="在这座岛上，你想对世界说什么…">${existing?escapeHtml(existing.voiceBody):escapeHtml(letter.body)}</textarea></div>
+    <div class="field"><label>此刻心情</label>
+      <div class="chips" id="isl-moods">
+        ${MOOD_TAGS.map(t=>`<div class="chip ${letter.mood===t?'on':''}" data-m="${t}" onclick="pickMoodChip(this,'${t}')">${t}</div>`).join("")}
+      </div></div>
+    <button class="btn btn-block btn-apricot" onclick="confirmIsland('${existing?existing.id:''}')">${existing?'重新寻找共鸣 →':'建造并寻找共鸣 →'}</button>
+  `;
+  DRAFT.mood = letter.mood;
+  modal.classList.add("show");
+}
+function restoreComposer(){
+  const modal = document.getElementById("composer-modal");
+  const sheet = modal.querySelector(".sheet");
+  if(sheet.dataset.old){ sheet.innerHTML = sheet.dataset.old; delete sheet.dataset.old; }
+  modal.classList.remove("show");
+}
+let ISLAND_THEME = null;
+function pickTheme(el,k){ ISLAND_THEME=k; document.querySelectorAll("#isl-themes .theme-opt").forEach(t=>t.classList.toggle("on",t.dataset.k===k)); }
+function confirmIsland(existingId){
+  const name = document.getElementById("isl-name").value.trim() || "无名小岛";
+  const theme = ISLAND_THEME || ISLAND_THEMES[0].key;
+  const vtitle = document.getElementById("isl-vtitle").value.trim();
+  const vbody = document.getElementById("isl-vbody").value.trim();
+  if(!vbody){ toast("写点心声再出发吧～"); return; }
+  const mood = DRAFT.mood;
+  const islands = getIslands();
+  // 移除旧的我的岛屿（重新匹配）
+  let myIsland;
+  if(existingId){
+    islands.forEach(i=>{ if(i.id===existingId){ i.name=name; i.theme=theme; i.voiceTitle=vtitle; i.voiceBody=vbody; i.mood=mood; i.tags=mood?[mood]:[]; i.status="waiting"; i.matchedTo=null; i.beach=[]; myIsland=i; } });
+  } else {
+    myIsland = {id:genId(), ownerId:ANON.id, ownerName:ANON.name, ownerAvatar:ANON.avatar, name, theme,
+      voiceTitle:vtitle, voiceBody:vbody, mood, tags:mood?[mood]:[], paper:DRAFT.paper, status:"waiting", matchedTo:null, beach:[], createdAt:nowISO()};
+    islands.push(myIsland);
+  }
+  safeSet(STORE.ISLANDS, islands);
+  // 寻找共鸣
+  const best = findResonance(myIsland);
+  restoreComposer();
+  playIslandCollision(myIsland, best, ()=>{
+    // 写入匹配关系
+    const isl2 = getIslands();
+    const me = isl2.find(i=>i.id===myIsland.id);
+    const other = isl2.find(i=>i.id===best.id);
+    me.status="matched"; me.matchedTo=best.id;
+    other.status="matched"; other.matchedTo=me.id;
+    safeSet(STORE.ISLANDS, isl2);
+    // 创建对话 + 对方问候
+    const conv = {id:genId(), mode:"island", islandId:me.id,
+      participants:[{id:ANON.id,name:ANON.name,avatar:ANON.avatar},{id:other.ownerId,name:other.ownerName,avatar:other.ownerAvatar}],
+      messages:[{fromId:other.ownerId, fromName:other.ownerName, fromAvatar:other.ownerAvatar, content:islandGreeting(other), createdAt:nowISO()}],
+      createdAt:nowISO(), unread:{[ANON.id]:1}};
+    const convs = getConvs(); convs.push(conv); safeSet(STORE.CONV, convs);
+    // 对方在沙滩留一句话
+    const m2 = getIslands(); const o2 = m2.find(i=>i.id===other.id);
+    o2.beach = o2.beach||[];
+    o2.beach.push({fromId:other.ownerId, fromName:other.ownerName, fromAvatar:other.ownerAvatar, emoji:"🌸", content:"原来海的那边，也有人懂这种心情。", createdAt:nowISO(), read:false});
+    safeSet(STORE.ISLANDS, m2);
+    goView("island");
+    toast("🏝️ 你的岛与「"+other.name+"」轻柔相撞，产生了共鸣");
+  });
+}
+function findResonance(myIsland){
+  const others = getIslands().filter(i=>i.ownerId!==ANON.id && i.status!=="matched");
+  if(!others.length){
+    // 没有可选岛屿时，造一个临时共鸣对象
+    return {id:"__synth", ownerId:"__synth", ownerName:"远方的歌#7710", ownerAvatar:"🎐", name:"远方的歌", theme:"月光海岸", voiceTitle:"等一个共鸣", voiceBody:"", mood:myIsland.mood, tags:myIsland.tags};
+  }
+  let best=null, bestScore=-1;
+  others.forEach(o=>{
+    const s = similarity(myIsland.tags, myIsland.voiceBody, o.tags, o.voiceBody);
+    if(s>bestScore){ bestScore=s; best=o; }
+  });
+  if(bestScore<=0){ best = others[Math.floor(Math.random()*others.length)]; }
+  return best;
+}
+function islandGreeting(other){
+  return "你好，我是「"+other.name+"」。海浪把我们推到了一起——读到你心声的那一刻，觉得并不孤单了。";
+}
+
+function renderIsland(){
+  markVisit("island");
+  const mine = getIslands().find(i=>i.ownerId===ANON.id);
+  const app = document.getElementById("app");
+  if(!mine){
+    app.innerHTML = `
+      <div class="view">
+        <div class="spread"><h2 style="font-size:19px;color:var(--sage-deep)">🏝️ 心灵岛屿</h2>
+          <span class="link-back" onclick="goView('home')">← 首页</span></div>
+        <div class="island-card">
+          <div class="island-shape theme-秘密花园">🏝️</div>
+          <h3 style="color:var(--ink)">你还没有心灵岛屿</h3>
+          <p class="muted">建造一座属于你的岛，写上心声，让情绪同频的另一座岛与你温柔相撞。</p>
+          <button class="btn btn-apricot mt-8" onclick="openComposer('island')">🏗️ 建造我的岛屿</button>
+        </div>
+      </div>`;
+    return;
+  }
+  const theme = ISLAND_THEMES.find(t=>t.key===mine.theme)||ISLAND_THEMES[0];
+  const matched = mine.status==="matched";
+  const other = matched ? getIslands().find(i=>i.id===mine.matchedTo) : null;
+  const conv = matched ? getConvs().find(c=>c.mode==="island" && c.islandId===mine.id) : null;
+  // 进入岛屿即把对方在沙滩的留言标记为已读（重置未读角标）
+  if(matched){
+    (mine.beach||[]).forEach(m=>{ if(m.fromId!==ANON.id) m.read=true; });
+    safeSet(STORE.ISLANDS, getIslands().map(i=>i.id===mine.id?mine:i));
+  }
+  const bottles = getBottles();
+  const myBottle = bottles.find(b=>b.islandId===mine.id);
+  app.innerHTML = `
+    <div class="view">
+      <div class="spread"><h2 style="font-size:19px;color:var(--sage-deep)">🏝️ 心灵岛屿</h2>
+        <span class="link-back" onclick="goView('home')">← 首页</span></div>
+      <div class="island-card">
+        <div class="island-shape ${theme.cls}">${theme.em}</div>
+        <h3 style="color:var(--ink)">${escapeHtml(mine.name)}</h3>
+        <div class="taglist">${mine.mood?`<span class="tag m">${mine.mood}</span>`:""}</div>
+        <div class="letter" style="text-align:left;border-left-color:var(--apricot);background:${mine.paper||'#fff'}">
+          <div class="title">${escapeHtml(mine.voiceTitle||"（无题）")}</div>
+          <div class="body">${escapeHtml(mine.voiceBody)}</div>
+        </div>
+        ${matched?`<div class="muted" style="text-align:center;margin-top:8px">💞 已与「${escapeHtml(other.name)}」产生共鸣</div>`
+                 :`<button class="btn btn-apricot btn-block mt-8" onclick="reResonate()">🔄 重新寻找共鸣</button>`}
+      </div>
+
+      ${matched?`
+        <div class="section-title">💬 与「${escapeHtml(other.name)}」的对话</div>
+        <div class="card">
+          <div class="chatbox" id="chatbox" style="max-height:300px;overflow-y:auto">
+            ${(conv?conv.messages:[]).map(m=>msgHtml(m,conv)).join("")}
+          </div>
+          <div class="chat-input">
+            <input id="chat-in" type="text" placeholder="和同频的灵魂聊聊…" maxlength="1000" onkeydown="if(event.key==='Enter')sendIslandChat('${mine.id}')">
+            <button class="btn btn-sm" onclick="sendIslandChat('${mine.id}')">发送</button>
+          </div>
+        </div>
+
+        <div class="section-title">🏖️ 留言沙滩</div>
+        <div class="card">
+          ${(mine.beach||[]).map(m=>`
+            <div class="cmt">
+              <div class="ca">${m.fromAvatar}</div>
+              <div class="cb">
+                <div class="cmeta"><span class="cname">${escapeHtml(m.fromName)}</span><span class="cemoji">${m.emoji||""}</span><span>${relTime(m.createdAt)}</span></div>
+                <div class="ctext">${escapeHtml(m.content)}</div>
+              </div>
+            </div>`).join("")||'<div class="muted">沙滩还空着，留一句话给彼此吧。</div>'}
+          <div class="reply-box" style="margin-top:12px">
+            <select id="beach-emoji" style="border:1.5px solid var(--line);border-radius:20px;padding:8px;font-size:16px">
+              <option>🌸</option><option>⭐</option><option>❤️</option><option>🤗</option><option>🌙</option><option>🌊</option>
+            </select>
+            <input id="beach-in" type="text" placeholder="在沙滩留一句匿名留言…" maxlength="200" onkeydown="if(event.key==='Enter')leaveBeach('${mine.id}')">
+            <button class="btn btn-sm" onclick="leaveBeach('${mine.id}')">留痕</button>
+          </div>
+        </div>
+
+        <div class="section-title">🍶 漂流瓶（公开区）</div>
+        <div class="card">
+          ${myBottle?`<div class="muted">你的心声已化作漂流瓶漂入公共海岸。</div>
+            <button class="btn btn-ghost btn-sm mt-8" onclick="recallBottle('${mine.id}')">收回漂流瓶</button>`
+           :`<p class="muted">把心声装进漂流瓶，让更多人看见、评论、共鸣。</p>
+            <button class="btn btn-soft btn-sm mt-8" onclick="releaseBottle('${mine.id}')">🌊 放漂流瓶入海</button>`}
+        </div>
+      `:''}
+
+      <div class="section-title">🌊 公共海岸（他人漂流瓶）</div>
+      <div id="bottle-list">${renderBottles()}</div>
+    </div>`;
+  if(matched && conv){ const b=document.getElementById("chatbox"); if(b) b.scrollTop=1e9; }
+}
+function reResonate(){
+  const mine = getIslands().find(i=>i.ownerId===ANON.id);
+  if(mine){ mine.status="waiting"; mine.matchedTo=null; safeSet(STORE.ISLANDS, getIslands());
+    showIslandSetup({title:mine.voiceTitle, body:mine.voiceBody, mood:mine.mood, paper:mine.paper, mode:"island"}, mine); }
+}
+function sendIslandChat(islandId){
+  const inp = document.getElementById("chat-in"); const text=inp.value.trim(); if(!text) return;
+  const convs = getConvs(); const c = convs.find(x=>x.mode==="island" && x.islandId===islandId);
+  if(!c) return;
+  c.messages.push({fromId:ANON.id, fromName:ANON.name, fromAvatar:ANON.avatar, content:text, createdAt:nowISO()});
+  safeSet(STORE.CONV, convs);
+  renderChatAppend(c, {fromId:ANON.id, fromName:ANON.name, fromAvatar:ANON.avatar, content:text, createdAt:nowISO()});
+  inp.value="";
+  setTimeout(()=>{
+    const other=c.participants.find(p=>p.id!==ANON.id);
+    const reply=botReply(text, other.name);
+    const cc=getConvs(); const cur=cc.find(x=>x.id===c.id); if(!cur) return;
+    cur.messages.push({fromId:other.id, fromName:other.name, fromAvatar:other.avatar, content:reply, createdAt:nowISO()});
+    cur.unread=cur.unread||{}; cur.unread[ANON.id]=(cur.unread[ANON.id]||0)+1; safeSet(STORE.CONV, cc);
+    if(CURRENT==="island" && document.getElementById("chatbox")) renderChatAppend(cur,{fromId:other.id,fromName:other.name,fromAvatar:other.avatar,content:reply,createdAt:nowISO()});
+    playSeedHand(()=>toast("🌱 "+other.name+" 在岛上回应了你"));
+  }, 2400+Math.random()*2000);
+}
+function leaveBeach(islandId){
+  const inp=document.getElementById("beach-in"); const text=inp.value.trim(); if(!text) return;
+  const emoji=document.getElementById("beach-emoji").value;
+  const isl=getIslands(); const me=isl.find(i=>i.id===islandId); if(!me) return;
+  me.beach=me.beach||[];
+  me.beach.push({fromId:ANON.id, fromName:ANON.name, fromAvatar:ANON.avatar, emoji, content:text, createdAt:nowISO(), read:true});
+  safeSet(STORE.ISLANDS, isl);
+  renderIsland();
+}
+function releaseBottle(islandId){
+  const isl=getIslands(); const me=isl.find(i=>i.id===islandId); if(!me) return;
+  const bottles=getBottles();
+  if(bottles.find(b=>b.islandId===islandId)){ toast("漂流瓶已经在海里啦"); return; }
+  bottles.push({id:genId(), islandId:me.id, ownerName:me.ownerName, ownerAvatar:me.ownerAvatar, voiceTitle:me.voiceTitle,
+    voiceBody:me.voiceBody, mood:me.mood, paper:me.paper, tags:me.tags, createdAt:nowISO(), comments:[]});
+  safeSet(STORE.BOTTLES, bottles);
+  toast("🌊 漂流瓶已入海，愿它被温柔拾起");
+  renderIsland();
+}
+function recallBottle(islandId){
+  let bottles=getBottles(); bottles=bottles.filter(b=>b.islandId!==islandId); safeSet(STORE.BOTTLES, bottles);
+  toast("已收回漂流瓶"); renderIsland();
+}
+function renderBottles(){
+  const bottles=getBottles();
+  if(!bottles.length) return '<div class="muted">公共海岸暂时空荡荡，等第一只漂流瓶漂来。</div>';
+  return bottles.map(b=>`
+    <div class="letter" style="background:${b.paper||'#fff'};border-left-color:var(--sky)">
+      <div class="lh"><span class="nm">${b.ownerAvatar} ${escapeHtml(b.ownerName)}</span><span class="tm">${relTime(b.createdAt)}</span></div>
+      <div class="title">${escapeHtml(b.voiceTitle||"（无题）")}</div>
+      <div class="body">${escapeHtml(b.voiceBody)}</div>
+      <div class="taglist">${b.mood?`<span class="tag m">${b.mood}</span>`:""}</div>
+      ${renderComments(b, "bottle", b.id)}
+    </div>`).join("");
+}
+
+/* ---- 10.3 迷树洞模式 ---- */
+let TREE_REVEALED = 0;
+function renderTreehole(){
+  markVisit("treehole");
+  const letters = getTreehole().slice().sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt));
+  const app = document.getElementById("app");
+  const waited = letters.slice(0, TREE_REVEALED);
+  app.innerHTML = `
+    <div class="view">
+      <div class="spread"><h2 style="font-size:19px;color:#e8f3ec">🌳 迷树洞</h2>
+        <span class="link-back" style="color:#bfe" onclick="goView('home')">← 首页</span></div>
+      <div class="treehole-stage" id="stage">
+        <div class="tree-hole"></div>
+        <p style="font-size:13px;opacity:.9">盘根错节的老树根下，发光的树洞藏着许多秘密。<br>点击挖掘，让一封信从黑暗中浮现。</p>
+        <button class="btn btn-soft dig-btn" onclick="digTree()">⛏️ 挖掘一封信（${waited.length}/${letters.length}）</button>
+        <div id="fireflies"></div>
+      </div>
+      <div class="trees" id="tree-letters"></div>
+      <button class="btn btn-apricot btn-block mt-14" onclick="openComposer('treehole')">✍️ 我也藏一封信</button>
+    </div>`;
+  spawnFireflies();
+  waited.forEach(l=>appendTreeLetter(l, false));
+}
+function digTree(){
+  const letters = getTreehole().slice().sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt));
+  if(TREE_REVEALED>=letters.length){ toast("树洞里的信都被你挖出来啦"); return; }
+  const l = letters[TREE_REVEALED];
+  TREE_REVEALED++;
+  appendTreeLetter(l, true);
+  const btn = document.querySelector(".dig-btn");
+  if(btn) btn.textContent = `⛏️ 挖掘一封信（${TREE_REVEALED}/${letters.length}）`;
+}
+function appendTreeLetter(l, animate){
+  const wrap = document.getElementById("tree-letters");
+  if(!wrap) return;
+  const div = document.createElement("div");
+  div.innerHTML = treeLetterHtml(l);
+  const node = div.firstElementChild;
+  if(animate) node.style.animation = "fadeUp .5s both";
+  wrap.insertBefore(node, wrap.firstChild);
+  bindTreeLetter(node, l);
+}
+function treeLetterHtml(l){
+  return `<div class="letter" data-id="${l.id}" style="background:${l.paper||'#fff'}">
+    <div class="lh"><span class="nm">${l.fromAvatar} ${escapeHtml(l.fromName)}</span><span class="tm">${relTime(l.createdAt)}</span></div>
+    <div class="title">${escapeHtml(l.title||"（无题）")}</div>
+    <div class="body">${escapeHtml(l.body)}</div>
+    <div class="taglist">${l.mood?`<span class="tag m">${l.mood}</span>`:""}</div>
+    <div class="more" onclick="toggleTree(this)">展开 / 收起全文 ▾</div>
+    ${renderComments(l, "tree", l.id)}
+  </div>`;
+}
+function bindTreeLetter(node, l){
+  // 评论提交已通过事件委托（renderComments 内联）
+}
+function toggleTree(el){
+  const card = el.closest(".letter");
+  card.classList.toggle("open");
+  el.textContent = card.classList.contains("open") ? "收起全文 ▴" : "展开 / 收起全文 ▾";
+}
+function sendTreehole(letter){
+  const th = getTreehole();
+  th.push({id:genId(), fromId:ANON.id, fromName:ANON.name, fromAvatar:ANON.avatar, title:letter.title, body:letter.body,
+    mood:letter.mood, paper:letter.paper, tags:letter.mood?[letter.mood]:[], revealed:true, createdAt:nowISO(), comments:[], isMine:true});
+  safeSet(STORE.TREEHOLE, th);
+  // 信纸卷起飞入树洞动画
+  playTreeholeSend(()=>{
+    toast("📜 你的信卷起，飞进了树洞");
+    TREE_REVEALED = getTreehole().length; // 让我的信可见
+    goView("treehole");
+  });
+}
+
+/* ---- 10.4 常规信箱模式 ---- */
+function sendPublicPost(letter){
+  const posts = getPosts();
+  posts.unshift({id:genId(), fromName:ANON.name, fromAvatar:ANON.avatar, title:letter.title, body:letter.body,
+    mood:letter.mood, paper:letter.paper, tags:letter.mood?[letter.mood]:[], createdAt:nowISO(), comments:[]});
+  safeSet(STORE.POSTS, posts);
+  toast("📮 已发布到公共板");
+  goView("mailbox");
+}
+function renderMailbox(){
+  markVisit("mailbox");
+  const mine = getMailboxes().find(m=>m.ownerId===ANON.id);
+  const app = document.getElementById("app");
+  const posts = getPosts();
+  const publicQA = mine ? mine.questions.filter(q=>q.status==="answered" && q.replyPublic) : [];
+  app.innerHTML = `
+    <div class="view">
+      <div class="spread"><h2 style="font-size:19px;color:var(--sage-deep)">📮 常规信箱</h2>
+        <span class="link-back" onclick="goView('home')">← 首页</span></div>
+
+      ${mine?`
+        <div class="card">
+          <h3 class="ct">💌 我的信箱</h3>
+          <div class="muted">把下面链接分享出去，别人可匿名向你提问：</div>
+          <div class="slug-box">${location.href.split('#')[0]}?mb=${mine.slug}</div>
+          <div class="row mt-8">
+            <button class="btn btn-soft btn-sm" onclick="copySlug('${mine.slug}')">📋 复制链接</button>
+            <button class="btn btn-ghost btn-sm" onclick="renderMailbox()">刷新</button>
+          </div>
+        </div>
+        <div class="section-title">📥 管理面板（待回复 ${mine.questions.filter(q=>q.status==='pending').length}）</div>
+        <div id="mb-manage">${renderMbManage(mine)}</div>
+        ${publicQA.length?`<div class="section-title">🌟 公开回复</div>${publicQA.map(q=>`
+          <div class="letter">
+            <div class="lh"><span class="nm">${q.fromAvatar} ${escapeHtml(q.fromName)} 提问</span><span class="tm">${relTime(q.createdAt)}</span></div>
+            <div class="body">${escapeHtml(q.content)}</div>
+            <div class="muted" style="margin-top:6px;color:var(--sage-deep)">💬 你的回复：${escapeHtml(q.reply)}</div>
+            ${renderComments(q, "mbqa", q.id)}
+          </div>`).join("")}`:''}
+      `:`
+        <div class="card">
+          <h3 class="ct">📮 创建你的专属信箱</h3>
+          <p class="muted">生成一个专属标识（模拟链接），朋友可匿名向你提问或留言，你来选择是否公开回复。</p>
+          <button class="btn btn-apricot btn-block mt-8" onclick="createMailbox()">✨ 创建个人信箱</button>
+        </div>
+      `}
+
+      <div class="section-title">📝 向信箱提问（模拟访客）</div>
+      <div class="card">
+        <div class="field" style="margin-bottom:8px">
+          <input type="text" id="ask-to" placeholder="想提问的信箱标识（留空=随机演示）" maxlength="20">
+        </div>
+        <div class="field" style="margin-bottom:8px">
+          <textarea id="ask-body" rows="3" maxlength="500" placeholder="以访客身份匿名提问或留言…"></textarea>
+        </div>
+        <button class="btn btn-soft btn-block" onclick="visitorAsk()">匿名发送</button>
+      </div>
+
+      <div class="section-title">📣 公共板</div>
+      <div id="post-list">
+        ${posts.map(p=>`
+          <div class="letter" style="background:${p.paper||'#fff'};border-left-color:var(--rose)">
+            <div class="lh"><span class="nm">${p.fromAvatar} ${escapeHtml(p.fromName)}</span><span class="tm">${relTime(p.createdAt)}</span></div>
+            ${p.title?`<div class="title">${escapeHtml(p.title)}</div>`:""}
+            <div class="body">${escapeHtml(p.body)}</div>
+            <div class="taglist">${p.mood?`<span class="tag m">${p.mood}</span>`:""}</div>
+            ${renderComments(p, "post", p.id)}
+          </div>`).join("")}
+      </div>
+    </div>`;
+}
+function createMailbox(){
+  const mailboxes = getMailboxes();
+  if(mailboxes.find(m=>m.ownerId===ANON.id)){ toast("你已经有信箱啦"); return; }
+  const slug = "mb"+Math.random().toString(36).slice(2,8);
+  mailboxes.push({id:genId(), ownerId:ANON.id, ownerName:ANON.name, ownerAvatar:ANON.avatar, slug, createdAt:nowISO(), questions:[]});
+  safeSet(STORE.MAILBOXES, mailboxes);
+  // 注入两条种子提问，便于演示
+  const mb = mailboxes.find(m=>m.ownerId===ANON.id);
+  mb.questions.push({id:genId(), fromName:"巷口的猫#8821", fromAvatar:"🐈", content:"你好呀，想问问你最近过得还好吗？", createdAt:nowISO(), reply:null, replyPublic:false, status:"pending", comments:[]});
+  mb.questions.push({id:genId(), fromName:"未寄的信#3390", fromAvatar:"✉️", content:"如果可以对三年前的自己说句话，你会说什么？", createdAt:nowISO(), reply:null, replyPublic:false, status:"pending", comments:[]});
+  safeSet(STORE.MAILBOXES, mailboxes);
+  toast("✨ 信箱已创建");
+  renderMailbox();
+}
+function copySlug(slug){
+  const link = location.href.split('#')[0]+"?mb="+slug;
+  if(navigator.clipboard){ navigator.clipboard.writeText(link).then(()=>toast("链接已复制")).catch(()=>toast(link)); }
+  else toast(link);
+}
+function renderMbManage(mb){
+  if(!mb.questions.length) return '<div class="muted">还没有人提问，把链接分享出去吧。</div>';
+  return mb.questions.map(q=>`
+    <div class="letter" style="border-left-color:${q.status==='pending'?'var(--apricot)':'var(--sage)'}">
+      <div class="lh"><span class="nm">${q.fromAvatar} ${escapeHtml(q.fromName)} ${q.status==='pending'?'<span class="unread-dot">待回复</span>':''}</span><span class="tm">${relTime(q.createdAt)}</span></div>
+      <div class="body">${escapeHtml(q.content)}</div>
+      ${q.reply?`        <div class="muted" style="margin-top:6px;color:var(--sage-deep)">💬 你的回复：${escapeHtml(q.reply)} ${q.replyPublic?'<span class="tag">已公开</span>':''}</div>
+        ${renderComments(q, "mbqa", q.id)}`:`
+        <div class="reply-box" style="margin-top:8px">
+          <input id="reply-${q.id}" type="text" placeholder="写下你的回复…" maxlength="500" onkeydown="if(event.key==='Enter')replyQuestion('${mb.id}','${q.id}')">
+          <button class="btn btn-sm" onclick="replyQuestion('${mb.id}','${q.id}')">回复</button>
+        </div>
+        <label class="muted" style="display:flex;gap:6px;align-items:center;margin-top:6px;font-size:12px">
+          <input type="checkbox" id="pub-${q.id}"> 公开这条回复（所有人可见并可评论）</label>
+      `}
+    </div>`).join("");
+}
+function replyQuestion(mbId, qId){
+  const inp=document.getElementById("reply-"+qId); const text=inp.value.trim(); if(!text) return;
+  const pub=document.getElementById("pub-"+qId).checked;
+  const mailboxes=getMailboxes(); const mb=mailboxes.find(m=>m.id===mbId); if(!mb) return;
+  const q=mb.questions.find(x=>x.id===qId); if(!q) return;
+  q.reply=text; q.replyPublic=pub; q.status="answered";
+  safeSet(STORE.MAILBOXES, mailboxes);
+  toast(pub?"已公开回复":"已回复（仅你可见）");
+  renderMailbox();
+}
+function visitorAsk(){
+  const to=document.getElementById("ask-to").value.trim();
+  const body=document.getElementById("ask-body").value.trim();
+  if(!body){ toast("写点什么再发送吧"); return; }
+  const mailboxes=getMailboxes();
+  let mb = to ? mailboxes.find(m=>m.slug===to) : mailboxes[Math.floor(Math.random()*mailboxes.length)];
+  if(!mb){ // 没有目标，作为公共板留言处理
+    sendPublicPost({title:"", body, mood:DRAFT.mood, paper:DRAFT.paper, mode:"mailbox", tags:[]});
+    return;
+  }
+  // 匿名访客身份
+  const vname = ADJ[Math.floor(Math.random()*ADJ.length)]+NOUN[Math.floor(Math.random()*NOUN.length)]+"#"+Math.floor(1000+Math.random()*9000);
+  const vavatar = AVATARS[Math.floor(Math.random()*AVATARS.length)];
+  mb.questions.push({id:genId(), fromName:vname, fromAvatar:vavatar, content:body, createdAt:nowISO(), reply:null, replyPublic:false, status:"pending", comments:[]});
+  safeSet(STORE.MAILBOXES, mailboxes);
+  toast("📮 匿名留言已送达信箱");
+  renderMailbox();
+}
+
+/* =====================================================================
+   11. 通用嵌套评论组件（楼中楼 + 点赞）
+   ===================================================================== */
+function renderComments(entity, type, id){
+  const comments = entity.comments||[];
+  return `
+    <div class="comments" id="cmt-${id}" data-type="${type}" data-id="${id}">
+      <div class="cmt-head" style="font-size:13px;color:var(--ink-soft);margin-bottom:8px">💬 评论 ${comments.length?comments.length:""}</div>
+      <div class="cmt-list">${comments.map(c=>commentHtml(c, type, id, 0)).join("")}</div>
+      <div class="reply-box" style="margin-top:6px">
+        <input class="c-input" type="text" placeholder="说点温暖的话…" maxlength="5000" onkeydown="if(event.key==='Enter')postComment('${type}','${id}',null,this)">
+        <button class="btn btn-sm" onclick="postComment('${type}','${id}',null,this)">发布</button>
+      </div>
+    </div>`;
+}
+function commentHtml(c, type, id, depth){
+  const likes = getLikes();
+  const likeKey = type+":"+id+":"+c.id;
+  const liked = !!likes[likeKey];
+  const replies = c.replies||[];
+  return `<div class="cmt" data-cid="${c.id}">
+    <div class="ca">${c.authorAvatar||"🌟"}</div>
+    <div class="cb">
+      <div class="cmeta"><span class="cname">${escapeHtml(c.authorName||"匿名")}</span>${c.emoji?`<span class="cemoji">${c.emoji}</span>`:""}<span>· ${fmtTime(c.createdAt)}</span></div>
+      <div class="ctext">${escapeHtml(c.content)}</div>
+      <div class="cact">
+        <span class="like ${liked?'on':''}" onclick="toggleLike('${type}','${id}','${c.id}',this)">${liked?'❤️':'🤍'} <span class="lc">${c.likes||0}</span></span>
+        ${depth<2?`<span onclick="showReplyBox(this)">↩️ 回复</span>`:""}
+      </div>
+      <div class="reply-slot"></div>
+      ${replies.length?`<div class="replies">${replies.map(r=>commentHtml(r, type, id, depth+1)).join("")}</div>`:""}
+    </div>
+  </div>`;
+}
+function showReplyBox(el){
+  const slot = el.closest(".cact").nextElementSibling;
+  if(slot.querySelector(".reply-box")){ slot.innerHTML=""; return; }
+  slot.innerHTML = `
+    <div class="emoji-pick">${["🌸","⭐","❤️","🤗","🌙"].map(e=>`<span onclick="pickCmtEmoji(this,'${e}')">${e}</span>`).join("")}</div>
+    <div class="reply-box">
+      <input class="c-input" type="text" placeholder="回复 TA…" maxlength="5000" onkeydown="if(event.key==='Enter')postReply(this)">
+      <button class="btn btn-sm" onclick="postReply(this)">回复</button>
+    </div>`;
+  // 记录父 cid
+  const parentCid = el.closest(".cmt").dataset.cid;
+  slot.querySelector(".reply-box").dataset.parent = parentCid;
+}
+let CUR_EMOJI = null;
+function pickCmtEmoji(el, e){
+  CUR_EMOJI = e;
+  el.parentElement.querySelectorAll("span").forEach(s=>s.classList.remove("on"));
+  el.classList.add("on");
+}
+function findEntity(type, id){
+  if(type==="tree") return getTreehole().find(t=>t.id===id);
+  if(type==="bottle") return getBottles().find(b=>b.id===id);
+  if(type==="post") return getPosts().find(p=>p.id===id);
+  if(type==="mbqa"){
+    const mb=getMailboxes().find(m=>m.questions.some(q=>q.id===id));
+    return mb?mb.questions.find(q=>q.id===id):null;
+  }
+  return null;
+}
+function findComment(list, cid){
+  for(const c of list){
+    if(c.id===cid) return c;
+    if(c.replies){ const f=findComment(c.replies, cid); if(f) return f; }
+  }
+  return null;
+}
+function postComment(type, id, parentCid, inputEl){
+  const inp = inputEl.closest(".reply-box").querySelector(".c-input");
+  const text = inp.value.trim(); if(!text){ toast("写点什么吧"); return; }
+  const entity = findEntity(type, id); if(!entity){ toast("内容不存在"); return; }
+  entity.comments = entity.comments||[];
+  const c = {id:genId(), authorId:ANON.id, authorName:ANON.name, authorAvatar:ANON.avatar,
+    emoji:CUR_EMOJI||"", content:text, createdAt:nowISO(), likes:0, replies:[]};
+  if(parentCid){
+    const parent = findComment(entity.comments, parentCid);
+    if(parent){ parent.replies=parent.replies||[]; parent.replies.push(c); }
+  } else {
+    entity.comments.push(c);
+  }
+  CUR_EMOJI=null;
+  persistEntity(type, id, entity);
+  rerenderComments(type, id);
+}
+function postReply(btn){
+  const box = btn.closest(".reply-box");
+  const parentCid = box.dataset.parent;
+  const container = btn.closest(".comments");
+  const type = container.dataset.type, id = container.dataset.id;
+  postComment(type, id, parentCid, btn);
+}
+function toggleLike(type, id, cid, el){
+  const likes = getLikes();
+  const key = type+":"+id+":"+cid;
+  const entity = findEntity(type, id); if(!entity) return;
+  const c = findComment(entity.comments||[], cid); if(!c) return;
+  c.likes = c.likes||0;
+  if(likes[key]){ delete likes[key]; c.likes=Math.max(0,c.likes-1); el.classList.remove("on"); el.firstChild.textContent="🤍 "; }
+  else { likes[key]=1; c.likes++; el.classList.add("on"); el.firstChild.textContent="❤️ "; }
+  el.querySelector(".lc").textContent=c.likes;
+  safeSet(STORE.LIKES, likes);
+  persistEntity(type, id, entity);
+}
+function persistEntity(type, id, entity){
+  if(type==="tree"){ let l=getTreehole(); l=l.map(t=>t.id===id?entity:t); safeSet(STORE.TREEHOLE,l); }
+  else if(type==="bottle"){ let b=getBottles(); b=b.map(x=>x.id===id?entity:x); safeSet(STORE.BOTTLES,b); }
+  else if(type==="post"){ let p=getPosts(); p=p.map(x=>x.id===id?entity:x); safeSet(STORE.POSTS,p); }
+  else if(type==="mbqa"){ const mbs=getMailboxes(); mbs.forEach(m=>m.questions=m.questions.map(q=>q.id===id?entity:q)); safeSet(STORE.MAILBOXES,mbs); }
+}
+function rerenderComments(type, id){
+  // 重新渲染该实体的评论区
+  const holders = document.querySelectorAll(`[id^="cmt-"]`);
+  holders.forEach(h=>{
+    if(h.id===`cmt-${id}`){
+      const entity = findEntity(type, id);
+      h.outerHTML = renderComments(entity, type, id);
+    }
+  });
+}
+
+/* =====================================================================
+   12. 全屏动画
+   ===================================================================== */
+function playDandelionScatter(cb){
+  const fx=document.getElementById("fx"); fx.className="show"; fx.innerHTML="";
+  const N=34;
+  for(let i=0;i<N;i++){
+    const s=document.createElement("div"); s.className="seed";
+    const sx=(Math.random()*40-20)+"px"; const sy=(-60-Math.random()*80)+"vh";
+    s.style.left=(Math.random()*100)+"vw"; s.style.top=(40+Math.random()*30)+"vh";
+    s.style.setProperty("--sx", (Math.random()*120-60)+"vw");
+    s.style.setProperty("--sy", (Math.random()*120-200)+"vh");
+    s.style.animationDuration=(1.8+Math.random()*1.6)+"s";
+    s.style.animationDelay=(Math.random()*0.5)+"s";
+    fx.appendChild(s);
+  }
+  setTimeout(()=>{ fx.className=""; fx.innerHTML=""; if(cb)cb(); }, 2400);
+}
+function playSeedHand(cb){
+  const fx=document.getElementById("fx"); fx.className="show"; fx.innerHTML="";
+  fx.innerHTML=`<div class="seed-hand"><div class="s">🌱</div><div style="color:#3a4a42;background:rgba(255,255,255,.85);padding:6px 14px;border-radius:20px;font-size:13px;margin-top:6px">一粒种子落到手心</div></div>`;
+  setTimeout(()=>{ fx.className=""; fx.innerHTML=""; if(cb)cb(); }, 1600);
+}
+function playIslandCollision(myIsland, other, cb){
+  const fx=document.getElementById("fx"); fx.className="show"; fx.innerHTML="";
+  const myTheme = (ISLAND_THEMES.find(t=>t.key===myIsland.theme)||ISLAND_THEMES[0]).cls;
+  const otTheme = (ISLAND_THEMES.find(t=>t.key===other.theme)||ISLAND_THEMES[0]).cls;
+  const myEm = (ISLAND_THEMES.find(t=>t.key===myIsland.theme)||ISLAND_THEMES[0]).em;
+  const otEm = (ISLAND_THEMES.find(t=>t.key===other.theme)||ISLAND_THEMES[0]).em;
+  fx.innerHTML=`
+    <div class="island-fly ${myTheme}" id="islA" style="left:-45%">${myEm}</div>
+    <div class="island-fly ${otTheme}" id="islB" style="right:-45%">${otEm}</div>
+    <div class="collision-glow" id="cg"></div>`;
+  const A=document.getElementById("islA"), B=document.getElementById("islB");
+  requestAnimationFrame(()=>{ A.style.left="18%"; B.style.right="18%"; });
+  setTimeout(()=>{
+    const cg=document.getElementById("cg"); cg.classList.add("go");
+    // 粒子散开
+    for(let i=0;i<18;i++){
+      const p=document.createElement("div"); p.className="particle";
+      p.style.background = i%2? "rgba(255,220,150,.9)":"rgba(255,255,255,.9)";
+      const ang=Math.random()*Math.PI*2, dist=80+Math.random()*160;
+      p.style.setProperty("--px", Math.cos(ang)*dist+"px");
+      p.style.setProperty("--py", Math.sin(ang)*dist+"px");
+      p.classList.add("go"); fx.appendChild(p);
+    }
+  }, 2400);
+  setTimeout(()=>{ fx.className=""; fx.innerHTML=""; if(cb)cb(); }, 3500);
+}
+function playTreeholeSend(cb){
+  const fx=document.getElementById("fx"); fx.className="show"; fx.innerHTML="";
+  fx.innerHTML=`<div class="seed-hand"><div class="s" style="font-size:54px">📜</div></div>`;
+  setTimeout(()=>{ fx.className=""; fx.innerHTML=""; if(cb)cb(); }, 1200);
+}
+function spawnFireflies(){
+  const box=document.getElementById("fireflies"); if(!box) return;
+  box.innerHTML="";
+  for(let i=0;i<14;i++){
+    const f=document.createElement("div"); f.className="firefly";
+    f.style.left=(Math.random()*100)+"%"; f.style.top=(Math.random()*90)+"%";
+    f.style.setProperty("--fx",(Math.random()*60-30)+"px");
+    f.style.setProperty("--fy",(Math.random()*60-40)+"px");
+    f.style.animationDelay=(Math.random()*5)+"s";
+    f.style.animationDuration=(4+Math.random()*4)+"s";
+    box.appendChild(f);
+  }
+}
+
+/* =====================================================================
+   13. 漂浮背景 & Toast
+   ===================================================================== */
+function buildSky(){
+  const sky=document.getElementById("sky");
+  const items=["🌼","🍃","✨","🌿","🌸","·"];
+  for(let i=0;i<14;i++){
+    const d=document.createElement("div"); d.className="float-item";
+    d.textContent=items[Math.floor(Math.random()*items.length)];
+    d.style.left=(Math.random()*100)+"vw";
+    d.style.top=(Math.random()*100)+"vh";
+    d.style.fontSize=(14+Math.random()*18)+"px";
+    d.style.setProperty("--dx",(Math.random()*120-60)+"px");
+    d.style.animationDuration=(18+Math.random()*20)+"s";
+    d.style.animationDelay=(-Math.random()*20)+"s";
+    sky.appendChild(d);
+  }
+}
+function toast(msg){
+  const t=document.getElementById("toast");
+  const d=document.createElement("div"); d.className="toast"; d.textContent=msg;
+  t.appendChild(d);
+  setTimeout(()=>d.remove(), 3200);
+}
+
+/* =====================================================================
+   14. 初始化
+   ===================================================================== */
+function init(){
+  ensureAnon();
+  migrateLegacy();
+  seedIfNeeded();
+  // 首次访问时记录时间戳，避免把种子内容误算为未读
+  ["home","dandelion","island","treehole","mailbox"].forEach(k=>{ if(!lastVisit(k)) markVisit(k); });
+  renderIdentity();
+  buildSky();
+  // 处理来自信箱链接的访问（?mb=slug）
+  const params=new URLSearchParams(location.search);
+  const mb=params.get("mb");
+  if(mb){
+    // 聚焦到该信箱的提问区
+    goView("mailbox");
+    setTimeout(()=>{ const el=document.getElementById("ask-to"); if(el) el.value=mb; toast("已定位到信箱："+mb); }, 300);
+  } else {
+    renderHome();
+  }
+}
+document.addEventListener("DOMContentLoaded", init);
+</script>
+</body>
+</html>
