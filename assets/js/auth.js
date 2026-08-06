@@ -29,6 +29,7 @@ function renderNav() {
   let userHtml;
   if (isLoggedIn && user) {
     userHtml = `<span class="nav-user">你好，${user.nickname}</span>
+      <a href="${base}profile.html" class="btn btn-soft btn-sm">资料</a>
       <button class="btn btn-soft btn-sm" onclick="logout()">退出</button>`;
   } else {
     userHtml = '<a href="auth.html" class="btn btn-sm">登录 / 注册</a>';

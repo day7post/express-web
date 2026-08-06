@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>个人资料 - 语滞</title>
+  <link rel="stylesheet" href="assets/css/theme.css">
+  <link rel="stylesheet" href="assets/css/common.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="topbar-inner">
+      <a href="index.html" class="brand">语滞<small>Yuzhi</small></a>
+      <nav class="nav" data-nav></nav>
+    </div>
+  </header>
+
+  <main class="auth-wrap">
+    <h1 class="text-center mb-24" style="font-size:24px">个人资料</h1>
+
+    <div class="card">
+      <div id="alert"></div>
+
+      <div class="field">
+        <label>当前昵称</label>
+        <div id="current-nick" class="text-faint">—</div>
+      </div>
+
+      <form id="nick-form" onsubmit="handleChangeNick(event)">
+        <div class="field">
+          <label>修改昵称（2-20 个字符，不可与别人重复）</label>
+          <input type="text" id="new-nickname" minlength="2" maxlength="20" placeholder="想让大家怎么称呼你" required>
+        </div>
+        <button type="submit" class="btn btn-block">保 存</button>
+      </form>
+
+      <div class="mt-16 text-center">
+        <a href="treehole/feed.html" class="btn btn-soft btn-sm">返回信箱</a>
+        <button class="btn btn-soft btn-sm" onclick="logout()">退出登录</button>
+      </div>
+    </div>
+
+    <p class="text-center text-faint mt-16" style="font-size:13px">昵称修改后全站立即生效，且不能与其他人重复。</p>
+  </main>
+
+  <script src="assets/js/config.js"></script>
+  <script src="assets/js/api.js"></script>
+  <script src="assets/js/auth.js"></script>
+  <script>
+    function showMsg(msg, isError) {
+      document.getElementById("alert").innerHTML =
+        `<div class="alert ${isError ? "alert-error" : "alert-success"}">${msg}</div>`;
+    }
+
+    async function handleChangeNick(e) {
+      e.preventDefault();
+      document.getElementById("alert").innerHTML = "";
+      const nick = document.getElementById("new-nickname").value.trim();
+      if (!nick) return;
+      try {
+        const data = await Api.put("/auth/me", { nickname: nick });
+        // 用新 token + user 刷新本地
+        Api.setAuth(data.token, data.user);
+        document.getElementById("current-nick").textContent = data.user.nickname;
+        document.getElementById("new-nickname").value = "";
+        showMsg("昵称已更新 ✅", false);
+      } catch (err) {
+        showMsg(err.detail || "修改失败", true);
+      }
+    }
+
+    // 初始化
+    if (!Api.isLoggedIn()) {
+      location.href = "auth.html?next=" + encodeURIComponent("profile.html");
+    } else {
+      const u = Api.getUser();
+      document.getElementById("current-nick").textContent = u ? u.nickname : "—";
+      document.getElementById("new-nickname").value = u ? u.nickname : "";
+    }
+  </script>
+</body>
+</html>

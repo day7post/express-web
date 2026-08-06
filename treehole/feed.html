@@ -72,6 +72,11 @@
           <label>信纸底色</label>
           <div class="papers" id="c-papers"></div>
         </div>
+        <div class="field" id="composer-anon-wrap" style="display:none">
+          <label>署名方式（公共板）</label>
+          <div class="chips" id="c-anon"></div>
+          <input type="text" id="c-anon-name" maxlength="20" placeholder="虚拟名称（选匿名时填写，留空随机生成）" style="margin-top:6px;width:100%;padding:8px;border:1px solid var(--line);border-radius:10px;box-sizing:border-box">
+        </div>
         <button class="btn btn-block btn-apricot" onclick="submitComposer()">送出这封信 →</button>
       </div>
     </div>
@@ -102,6 +107,11 @@ const STORE = {
   SETTINGS:"yuzhi_drift_settings",
   SEED:"yuzhi_drift_seeded"
 };
+
+// 后端（云）数据缓存：迷树洞 / 公共板 / 点赞状态（localStorage 仅存 token 与匿名身份）
+let BE_TREE = [];
+let BE_PUBLIC = [];
+let BE_LIKES = {};   // "postId:replyId" -> 1 表示当前用户已赞
 // 可能遗留的旧版键（仅读取兼容，绝不覆盖）
 const LEGACY_KEYS = ["yuzhi_treehole","treehole_posts","anonymous_letters","mailbox_questions","yuzhi_anon","anonymous_name","anon_name"];
 
@@ -209,8 +219,16 @@ function ensureAnon(){
 }
 function renderIdentity(){
   const el = document.getElementById("identity");
-  el.innerHTML = `<div class="avatar">${ANON.avatar}</div><span class="nm">${escapeHtml(ANON.name)}</span>`;
-  el.onclick = ()=> toast("你的匿名身份：" + ANON.name);
+  if(Api.isLoggedIn()){
+    const u = Api.getUser();
+    const nm = (u && u.nickname) ? u.nickname : "我";
+    el.innerHTML = `<div class="avatar">${avatarFor(nm)}</div><span class="nm">${escapeHtml(nm)}</span>`;
+    el.onclick = ()=> location.href = (typeof navBase==="function"?navBase():"") + "profile.html";
+    el.title = "点击查看/修改我的资料";
+  } else {
+    el.innerHTML = `<div class="avatar">${ANON.avatar}</div><span class="nm">${escapeHtml(ANON.name)}</span>`;
+    el.onclick = ()=> toast("你的匿名身份：" + ANON.name);
+  }
 }
 
 /* =====================================================================
@@ -425,13 +443,45 @@ function openComposer(prefillMode){
   document.getElementById("c-moods").innerHTML = MOOD_TAGS.map(t=>`<div class="chip" data-m="${t}" onclick="pickMoodChip(this,'${t}')">${t}</div>`).join("");
   // 信纸
   document.getElementById("c-papers").innerHTML = PAPER_COLORS.map((p,i)=>`<div class="paper ${i===0?'on':''}" data-bg="${p.bg}" style="background:${p.bg}" title="${p.name}" onclick="pickPaper(this,'${p.bg}')"></div>`).join("");
+  // 公共板匿名署名选项
+  const anonWrap = document.getElementById("composer-anon-wrap");
+  if(DRAFT.mode==="mailbox"){
+    anonWrap.style.display="block";
+    DRAFT.anon = "real";
+    document.getElementById("c-anon").innerHTML = [["real","🌟 用我的名字"],["anonymous","🌫️ 匿名（虚拟名）"]]
+      .map(m=>`<div class="chip ${m[0]==='real'?'on':''}" data-a="${m[0]}" onclick="pickAnonChip(this,'${m[0]}')">${m[1]}</div>`).join("");
+    const an = document.getElementById("c-anon-name"); if(an){ an.value=""; an.style.display="none"; }
+  } else {
+    anonWrap.style.display="none";
+    DRAFT.anon = "real";
+  }
   document.getElementById("c-title").value="";
   document.getElementById("c-body").value="";
   document.getElementById("c-count").textContent="0 / 5000";
   document.getElementById("composer-modal").classList.add("show");
 }
+function pickAnonChip(el,a){
+  DRAFT.anon = a;
+  document.querySelectorAll("#c-anon .chip").forEach(c=>c.classList.toggle("on", c.dataset.a===a));
+  const nameInput = document.getElementById("c-anon-name");
+  if(nameInput) nameInput.style.display = (a==="anonymous") ? "block" : "none";
+}
 function closeComposer(){ document.getElementById("composer-modal").classList.remove("show"); }
-function pickComposerMode(m){ DRAFT.mode=m; document.querySelectorAll("#composer-modes .mode-tab").forEach(t=>t.classList.toggle("on",t.dataset.m===m)); }
+function pickComposerMode(m){
+  DRAFT.mode=m;
+  document.querySelectorAll("#composer-modes .mode-tab").forEach(t=>t.classList.toggle("on",t.dataset.m===m));
+  const anonWrap = document.getElementById("composer-anon-wrap");
+  if(m==="mailbox"){
+    anonWrap.style.display="block";
+    DRAFT.anon = DRAFT.anon || "real";
+    document.getElementById("c-anon").innerHTML = [["real","🌟 用我的名字"],["anonymous","🌫️ 匿名（虚拟名）"]]
+      .map(x=>`<div class="chip ${x[0]===DRAFT.anon?'on':''}" data-a="${x[0]}" onclick="pickAnonChip(this,'${x[0]}')">${x[1]}</div>`).join("");
+    const ni = document.getElementById("c-anon-name"); if(ni) ni.style.display = (DRAFT.anon==="anonymous")?"block":"none";
+  } else {
+    anonWrap.style.display="none";
+    DRAFT.anon="real";
+  }
+}
 function pickMoodChip(el,t){ DRAFT.mood = (DRAFT.mood===t?null:t); el.classList.toggle("on", DRAFT.mood===t); }
 function pickPaper(el,bg){ DRAFT.paper=bg; document.querySelectorAll("#c-papers .paper").forEach(p=>p.classList.toggle("on",p.dataset.bg===bg)); }
 
@@ -439,7 +489,7 @@ function submitComposer(){
   const title = document.getElementById("c-title").value.trim();
   const body = document.getElementById("c-body").value.trim();
   if(!body){ toast("写点什么再送出吧～"); return; }
-  const letter = { title, body, mood:DRAFT.mood, paper:DRAFT.paper, mode:DRAFT.mode, tags:DRAFT.mood?[DRAFT.mood]:[] };
+  const letter = { title, body, mood:DRAFT.mood, paper:DRAFT.paper, mode:DRAFT.mode, anon:DRAFT.anon, anonName:document.getElementById("c-anon-name")?.value.trim()||"", tags:DRAFT.mood?[DRAFT.mood]:[] };
   closeComposer();
   deliver(letter);
 }
@@ -856,83 +906,79 @@ function renderBottles(){
 let TREE_REVEALED = 0;
 function renderTreehole(){
   markVisit("treehole");
-  const letters = getTreehole().slice().sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt));
   const app = document.getElementById("app");
-  const waited = letters.slice(0, TREE_REVEALED);
   app.innerHTML = `
     <div class="view">
       <div class="spread"><h2 style="font-size:19px;color:#e8f3ec">🌳 迷树洞</h2>
         <span class="link-back" style="color:#bfe" onclick="goView('home')">← 首页</span></div>
       <div class="treehole-stage" id="stage">
         <div class="tree-hole"></div>
-        <p style="font-size:13px;opacity:.9">盘根错节的老树根下，发光的树洞藏着许多秘密。<br>点击挖掘，让一封信从黑暗中浮现。</p>
-        <button class="btn btn-soft dig-btn" onclick="digTree()">⛏️ 挖掘一封信（${waited.length}/${letters.length}）</button>
+        <p style="font-size:13px;opacity:.9">盘根错节的老树根下，发光的树洞藏着许多秘密。<br>在这里，你的名字会被温柔地记下。</p>
         <div id="fireflies"></div>
       </div>
       <div class="trees" id="tree-letters"></div>
       <button class="btn btn-apricot btn-block mt-14" onclick="openComposer('treehole')">✍️ 我也藏一封信</button>
     </div>`;
   spawnFireflies();
-  waited.forEach(l=>appendTreeLetter(l, false));
-}
-function digTree(){
-  const letters = getTreehole().slice().sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt));
-  if(TREE_REVEALED>=letters.length){ toast("树洞里的信都被你挖出来啦"); return; }
-  const l = letters[TREE_REVEALED];
-  TREE_REVEALED++;
-  appendTreeLetter(l, true);
-  const btn = document.querySelector(".dig-btn");
-  if(btn) btn.textContent = `⛏️ 挖掘一封信（${TREE_REVEALED}/${letters.length}）`;
-}
-function appendTreeLetter(l, animate){
-  const wrap = document.getElementById("tree-letters");
-  if(!wrap) return;
-  const div = document.createElement("div");
-  div.innerHTML = treeLetterHtml(l);
-  const node = div.firstElementChild;
-  if(animate) node.style.animation = "fadeUp .5s both";
-  wrap.insertBefore(node, wrap.firstChild);
-  bindTreeLetter(node, l);
+  loadBoard("treehole");
 }
 function treeLetterHtml(l){
+  const name = beName(l), avatar = beAvatar(l);
   return `<div class="letter" data-id="${l.id}" style="background:${l.paper||'#fff'}">
-    <div class="lh"><span class="nm">${l.fromAvatar} ${escapeHtml(l.fromName)}</span><span class="tm">${relTime(l.createdAt)}</span></div>
-    <div class="title">${escapeHtml(l.title||"（无题）")}</div>
-    <div class="body">${escapeHtml(l.body)}</div>
-    <div class="taglist">${l.mood?`<span class="tag m">${l.mood}</span>`:""}</div>
+    <div class="lh"><span class="nm">${avatar} ${escapeHtml(name)}</span><span class="tm">${relTime(l.created_at)}</span></div>
+    ${l.title?`<div class="title">${escapeHtml(l.title)}</div>`:""}
+    <div class="body">${escapeHtml(l.content)}</div>
+    <div class="taglist">${l.tag?`<span class="tag m">${escapeHtml(l.tag)}</span>`:""}</div>
     <div class="more" onclick="toggleTree(this)">展开 / 收起全文 ▾</div>
-    ${renderComments(l, "tree", l.id)}
+    ${commentsHtmlBE(l)}
   </div>`;
-}
-function bindTreeLetter(node, l){
-  // 评论提交已通过事件委托（renderComments 内联）
 }
 function toggleTree(el){
   const card = el.closest(".letter");
   card.classList.toggle("open");
   el.textContent = card.classList.contains("open") ? "收起全文 ▴" : "展开 / 收起全文 ▾";
 }
+function renderTreeLetters(items){
+  const wrap = document.getElementById("tree-letters");
+  if(!wrap) return;
+  if(!items.length){ wrap.innerHTML = '<div class="muted" style="padding:18px;text-align:center">还没有信，来做第一个藏信的人吧 🌱</div>'; return; }
+  const sorted = items.slice().sort((a,b)=> new Date(b.created_at) - new Date(a.created_at));
+  wrap.innerHTML = sorted.map(l=>treeLetterHtml(l)).join("");
+}
+function publicPostHtml(p){
+  const name = beName(p), avatar = beAvatar(p);
+  return `<div class="letter" data-id="${p.id}" style="background:${p.paper||'#fff'};border-left-color:var(--rose)">
+    <div class="lh"><span class="nm">${avatar} ${escapeHtml(name)}</span><span class="tm">${relTime(p.created_at)}</span></div>
+    ${p.title?`<div class="title">${escapeHtml(p.title)}</div>`:""}
+    <div class="body">${escapeHtml(p.content)}</div>
+    <div class="taglist">${p.tag?`<span class="tag m">${escapeHtml(p.tag)}</span>`:""}</div>
+    ${commentsHtmlBE(p)}
+  </div>`;
+}
+function renderPublicPosts(items){
+  const wrap = document.getElementById("post-list");
+  if(!wrap) return;
+  if(!items.length){ wrap.innerHTML = '<div class="muted" style="padding:18px;text-align:center">公共板还很安静，来发第一条吧 📣</div>'; return; }
+  const sorted = items.slice().sort((a,b)=> new Date(b.created_at) - new Date(a.created_at));
+  wrap.innerHTML = sorted.map(p=>publicPostHtml(p)).join("");
+}
 function sendTreehole(letter){
-  const th = getTreehole();
-  th.push({id:genId(), fromId:ANON.id, fromName:ANON.name, fromAvatar:ANON.avatar, title:letter.title, body:letter.body,
-    mood:letter.mood, paper:letter.paper, tags:letter.mood?[letter.mood]:[], revealed:true, createdAt:nowISO(), comments:[], isMine:true});
-  safeSet(STORE.TREEHOLE, th);
-  // 信纸卷起飞入树洞动画
-  playTreeholeSend(()=>{
-    toast("📜 你的信卷起，飞进了树洞");
-    TREE_REVEALED = getTreehole().length; // 让我的信可见
-    goView("treehole");
-  });
+  if(!requireLogin()) return;
+  closeComposer();
+  Api.post("/treehole/posts", { kind:"treehole", display_mode:"real", title:letter.title||"", content:letter.body, tag:letter.mood||null })
+    .then(()=>{ toast("📜 你的信藏进了树洞"); goView("treehole"); })
+    .catch(e=>{ toast(e.detail || "发布失败，请稍后重试"); });
 }
 
 /* ---- 10.4 常规信箱模式 ---- */
 function sendPublicPost(letter){
-  const posts = getPosts();
-  posts.unshift({id:genId(), fromName:ANON.name, fromAvatar:ANON.avatar, title:letter.title, body:letter.body,
-    mood:letter.mood, paper:letter.paper, tags:letter.mood?[letter.mood]:[], createdAt:nowISO(), comments:[]});
-  safeSet(STORE.POSTS, posts);
-  toast("📮 已发布到公共板");
-  goView("mailbox");
+  if(!requireLogin()) return;
+  closeComposer();
+  const mode = letter.anon==="anonymous" ? "anonymous" : "real";
+  const anonName = mode==="anonymous" ? (letter.anonName||"") : "";
+  Api.post("/treehole/posts", { kind:"public", display_mode:mode, anonymous_name:anonName, title:letter.title||"", content:letter.body, tag:letter.mood||null })
+    .then(()=>{ toast("📮 已发布到公共板"); goView("mailbox"); })
+    .catch(e=>{ toast(e.detail || "发布失败，请稍后重试"); });
 }
 function renderMailbox(){
   markVisit("mailbox");
@@ -984,17 +1030,9 @@ function renderMailbox(){
       </div>
 
       <div class="section-title">📣 公共板</div>
-      <div id="post-list">
-        ${posts.map(p=>`
-          <div class="letter" style="background:${p.paper||'#fff'};border-left-color:var(--rose)">
-            <div class="lh"><span class="nm">${p.fromAvatar} ${escapeHtml(p.fromName)}</span><span class="tm">${relTime(p.createdAt)}</span></div>
-            ${p.title?`<div class="title">${escapeHtml(p.title)}</div>`:""}
-            <div class="body">${escapeHtml(p.body)}</div>
-            <div class="taglist">${p.mood?`<span class="tag m">${p.mood}</span>`:""}</div>
-            ${renderComments(p, "post", p.id)}
-          </div>`).join("")}
-      </div>
+      <div id="post-list"><div class="muted" style="padding:18px;text-align:center;opacity:.7">正在加载…</div></div>
     </div>`;
+  loadBoard("public");
 }
 function createMailbox(){
   const mailboxes = getMailboxes();
@@ -1182,6 +1220,128 @@ function rerenderComments(type, id){
       h.outerHTML = renderComments(entity, type, id);
     }
   });
+}
+
+/* =====================================================================
+   11b. 后端（云）评论 / 点赞 / 加载（迷树洞 + 公共板）
+   ===================================================================== */
+// 登录守卫：未登录则引导登录，返回 false
+function requireLogin(){
+  if(Api.isLoggedIn()) return true;
+  toast("请先登录，你的名字会出现在评论里 💡");
+  const base = (typeof navBase==="function") ? navBase() : "";
+  setTimeout(()=>{ location.href = base + "auth.html?next=" + encodeURIComponent(location.pathname + location.search); }, 900);
+  return false;
+}
+// 根据显示模式取展示名 / 头像
+function beName(item){
+  if(item.display_mode==="anonymous") return item.anonymous_name || "匿名";
+  return item.real_nickname || "用户";
+}
+function beAvatar(item){
+  if(item.display_mode==="anonymous") return "🌫️";
+  return avatarFor(item.real_nickname || item.anonymous_name || "u");
+}
+// 将后端扁平回复（含 parent_reply_id）组装成树
+function buildReplyTree(flat){
+  const map = {}; const roots = [];
+  (flat||[]).forEach(r=>{ map[r.id] = {...r, children:[]}; });
+  (flat||[]).forEach(r=>{
+    if(r.parent_reply_id && map[r.parent_reply_id]) map[r.parent_reply_id].children.push(map[r.id]);
+    else roots.push(map[r.id]);
+  });
+  return roots;
+}
+// 评论区容器（数据来自后端，post.replies 为扁平列表）
+function commentsHtmlBE(post){
+  const tree = buildReplyTree(post.replies);
+  const count = (post.replies||[]).length;
+  return `<div class="comments" id="cmt-${post.id}" data-type="be" data-id="${post.id}">
+    <div class="cmt-head" style="font-size:13px;color:var(--ink-soft);margin-bottom:8px">💬 评论 ${count?count:""}</div>
+    <div class="cmt-list">${tree.map(r=>commentHtmlBE(r,0,post.id)).join("")}</div>
+    <div class="reply-box" style="margin-top:6px">
+      <input class="c-input" type="text" placeholder="说点温暖的话…" maxlength="5000" onkeydown="if(event.key==='Enter')postCommentBE('${post.id}',null,this)">
+      <button class="btn btn-sm" onclick="postCommentBE('${post.id}',null,this)">发布</button>
+    </div>
+  </div>`;
+}
+// 单条评论（递归渲染任意层级）
+function commentHtmlBE(r, depth, postId){
+  const name = beName(r), avatar = beAvatar(r);
+  const liked = BE_LIKES[postId+":"+r.id];
+  const children = r.children||[];
+  const replyBtn = depth<10 ? `<span onclick="showReplyBoxBE(this)">↩️ 回复</span>` : "";
+  return `<div class="cmt" data-cid="${r.id}">
+    <div class="ca">${avatar}</div>
+    <div class="cb">
+      <div class="cmeta"><span class="cname">${escapeHtml(name)}</span><span>· ${fmtTime(r.created_at)}</span></div>
+      <div class="ctext">${escapeHtml(r.content)}</div>
+      <div class="cact">
+        <span class="like ${liked?'on':''}" onclick="toggleLikeBE('${postId}','${r.id}',this)">${liked?'❤️':'🤍'} <span class="lc">${r.like_count||0}</span></span>
+        ${replyBtn}
+      </div>
+      <div class="reply-slot"></div>
+      ${children.length?`<div class="replies">${children.map(c=>commentHtmlBE(c,depth+1,postId)).join("")}</div>`:""}
+    </div>
+  </div>`;
+}
+// 展开回复输入框
+function showReplyBoxBE(el){
+  const slot = el.closest(".cact").nextElementSibling;
+  if(slot.querySelector(".reply-box")){ slot.innerHTML=""; return; }
+  const cmt = el.closest(".cmt");
+  const parentCid = cmt.dataset.cid;
+  const container = el.closest(".comments");
+  const postId = container.dataset.id;
+  slot.innerHTML = `<div class="reply-box">
+    <input class="c-input" type="text" placeholder="回复 TA…" maxlength="5000" onkeydown="if(event.key==='Enter')postCommentBE('${postId}','${parentCid}',this)">
+    <button class="btn btn-sm" onclick="postCommentBE('${postId}','${parentCid}',this)">回复</button>
+  </div>`;
+}
+// 提交评论 / 楼中楼（后端）
+async function postCommentBE(postId, parentCid, inputEl){
+  const inp = inputEl.closest(".reply-box").querySelector(".c-input");
+  const text = inp.value.trim(); if(!text){ toast("写点什么吧"); return; }
+  if(!requireLogin()) return;
+  inp.value = "";
+  try{
+    await Api.post(`/treehole/posts/${postId}/replies`, { content:text, parent_reply_id: parentCid||null, display_mode:"real" });
+    toast("已发送");
+    await refreshComments(postId);
+  }catch(e){ toast(e.detail || "发送失败，请稍后重试"); }
+}
+// 点赞 / 取消（后端，跨用户去重）
+async function toggleLikeBE(postId, replyId, el){
+  try{
+    const r = await Api.post("/reactions", { target_type:"reply", target_id:replyId });
+    const liked = r.liked;
+    el.classList.toggle("on", liked);
+    el.firstChild.textContent = liked ? "❤️ " : "🤍 ";
+    el.querySelector(".lc").textContent = r.like_count;
+    BE_LIKES[postId+":"+replyId] = liked ? 1 : 0;
+  }catch(e){ toast(e.detail || "操作失败"); }
+}
+// 重新拉取某帖评论并刷新评论区
+async function refreshComments(postId){
+  try{
+    const data = await Api.get(`/treehole/posts/${postId}`);
+    const holder = document.getElementById("cmt-"+postId);
+    if(holder) holder.outerHTML = commentsHtmlBE({ id:postId, replies:data.replies });
+  }catch(e){ /* 静默：列表已在别处展示 */ }
+}
+// 加载某个板块（迷树洞 / 公共板）并渲染
+async function loadBoard(kind){
+  const wrap = kind==="treehole" ? document.getElementById("tree-letters") : document.getElementById("post-list");
+  if(!wrap) return;
+  wrap.innerHTML = '<div class="muted" style="padding:18px;text-align:center;opacity:.7">正在加载…</div>';
+  try{
+    const data = await Api.get(`/treehole/posts?kind=${kind}&limit=50`);
+    const items = data.items || [];
+    if(kind==="treehole"){ BE_TREE = items; renderTreeLetters(items); }
+    else { BE_PUBLIC = items; renderPublicPosts(items); }
+  }catch(e){
+    wrap.innerHTML = `<div class="muted" style="padding:18px;text-align:center">加载失败：${escapeHtml(e.detail || "请稍后重试")}</div>`;
+  }
 }
 
 /* =====================================================================
