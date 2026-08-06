@@ -955,8 +955,8 @@ function publicPostHtml(p){
     ${commentsHtmlBE(p)}
   </div>`;
 }
-function renderPublicPosts(items){
-  const wrap = document.getElementById("post-list");
+function renderPublicPosts(items, wrapId){
+  const wrap = document.getElementById(wrapId || "post-list");
   if(!wrap) return;
   if(!items.length){ wrap.innerHTML = '<div class="muted" style="padding:18px;text-align:center">公共板还很安静，来发第一条吧 📣</div>'; return; }
   const sorted = items.slice().sort((a,b)=> new Date(b.created_at) - new Date(a.created_at));
@@ -982,46 +982,24 @@ function sendPublicPost(letter){
 }
 function renderMailbox(){
   markVisit("mailbox");
-  const mine = getMailboxes().find(m=>m.ownerId===ANON.id);
   const app = document.getElementById("app");
-  const posts = getPosts();
-  const publicQA = mine ? mine.questions.filter(q=>q.status==="answered" && q.replyPublic) : [];
+  const loggedIn = Api.isLoggedIn();
   app.innerHTML = `
     <div class="view">
       <div class="spread"><h2 style="font-size:19px;color:var(--sage-deep)">📮 常规信箱</h2>
         <span class="link-back" onclick="goView('home')">← 首页</span></div>
 
-      ${mine?`
+      ${loggedIn ? `<div id="mb-owner"></div>` : `
         <div class="card">
-          <h3 class="ct">💌 我的信箱</h3>
-          <div class="muted">把下面链接分享出去，别人可匿名向你提问：</div>
-          <div class="slug-box">${location.href.split('#')[0]}?mb=${mine.slug}</div>
-          <div class="row mt-8">
-            <button class="btn btn-soft btn-sm" onclick="copySlug('${mine.slug}')">📋 复制链接</button>
-            <button class="btn btn-ghost btn-sm" onclick="renderMailbox()">刷新</button>
-          </div>
-        </div>
-        <div class="section-title">📥 管理面板（待回复 ${mine.questions.filter(q=>q.status==='pending').length}）</div>
-        <div id="mb-manage">${renderMbManage(mine)}</div>
-        ${publicQA.length?`<div class="section-title">🌟 公开回复</div>${publicQA.map(q=>`
-          <div class="letter">
-            <div class="lh"><span class="nm">${q.fromAvatar} ${escapeHtml(q.fromName)} 提问</span><span class="tm">${relTime(q.createdAt)}</span></div>
-            <div class="body">${escapeHtml(q.content)}</div>
-            <div class="muted" style="margin-top:6px;color:var(--sage-deep)">💬 你的回复：${escapeHtml(q.reply)}</div>
-            ${renderComments(q, "mbqa", q.id)}
-          </div>`).join("")}`:''}
-      `:`
-        <div class="card">
-          <h3 class="ct">📮 创建你的专属信箱</h3>
-          <p class="muted">生成一个专属标识（模拟链接），朋友可匿名向你提问或留言，你来选择是否公开回复。</p>
-          <button class="btn btn-apricot btn-block mt-8" onclick="createMailbox()">✨ 创建个人信箱</button>
-        </div>
-      `}
+          <h3 class="ct">📮 登录后管理你的信箱</h3>
+          <p class="muted">登录账号即可创建专属信箱、收取匿名提问，并选择是否公开回复。提问与浏览无需登录。</p>
+          <button class="btn btn-apricot btn-block mt-8" onclick="goLogin()">去登录 / 注册</button>
+        </div>`}
 
-      <div class="section-title">📝 向信箱提问（模拟访客）</div>
+      <div class="section-title">📝 向信箱提问（匿名）</div>
       <div class="card">
         <div class="field" style="margin-bottom:8px">
-          <input type="text" id="ask-to" placeholder="想提问的信箱标识（留空=随机演示）" maxlength="20">
+          <input type="text" id="ask-to" placeholder="想提问的信箱标识（留空=去公共板）" maxlength="20">
         </div>
         <div class="field" style="margin-bottom:8px">
           <textarea id="ask-body" rows="3" maxlength="500" placeholder="以访客身份匿名提问或留言…"></textarea>
@@ -1029,74 +1007,103 @@ function renderMailbox(){
         <button class="btn btn-soft btn-block" onclick="visitorAsk()">匿名发送</button>
       </div>
 
+      <div class="section-title">🌟 公开回复</div>
+      <div id="mb-public"><div class="muted" style="padding:18px;text-align:center;opacity:.7">正在加载…</div></div>
+
       <div class="section-title">📣 公共板</div>
       <div id="post-list"><div class="muted" style="padding:18px;text-align:center;opacity:.7">正在加载…</div></div>
     </div>`;
+  loadBoard("mailbox");
   loadBoard("public");
+  if(loggedIn) loadMyMailbox();
+}
+
+async function loadMyMailbox(){
+  const ownerEl = document.getElementById("mb-owner");
+  if(!ownerEl) return;
+  try{
+    const data = await Api.get("/mailbox");
+    if(!data.mailbox){
+      ownerEl.innerHTML = `
+        <div class="card">
+          <h3 class="ct">📮 创建你的专属信箱</h3>
+          <p class="muted">生成一个专属标识，朋友可匿名向你提问，你来选择是否公开回复。</p>
+          <button class="btn btn-apricot btn-block mt-8" onclick="createMailbox()">✨ 创建个人信箱</button>
+        </div>`;
+      return;
+    }
+    const mb = data.mailbox;
+    const pending = (data.questions||[]).filter(q=>!q.reply).length;
+    ownerEl.innerHTML = `
+      <div class="card">
+        <h3 class="ct">💌 我的信箱</h3>
+        <div class="muted">把下面链接分享出去，别人可匿名向你提问：</div>
+        <div class="slug-box">${location.href.split('#')[0]}?mb=${mb.slug}</div>
+        <div class="row mt-8">
+          <button class="btn btn-soft btn-sm" onclick="copySlug('${mb.slug}')">📋 复制链接</button>
+          <button class="btn btn-ghost btn-sm" onclick="loadMyMailbox()">刷新</button>
+        </div>
+      </div>
+      <div class="section-title">📥 管理面板（待回复 ${pending}）</div>
+      <div id="mb-manage">${renderMbManageBE(data.questions||[])}</div>`;
+  }catch(e){
+    ownerEl.innerHTML = `<div class="muted" style="padding:14px">加载失败：${escapeHtml(e.detail || "请稍后重试")}</div>`;
+  }
 }
 function createMailbox(){
-  const mailboxes = getMailboxes();
-  if(mailboxes.find(m=>m.ownerId===ANON.id)){ toast("你已经有信箱啦"); return; }
-  const slug = "mb"+Math.random().toString(36).slice(2,8);
-  mailboxes.push({id:genId(), ownerId:ANON.id, ownerName:ANON.name, ownerAvatar:ANON.avatar, slug, createdAt:nowISO(), questions:[]});
-  safeSet(STORE.MAILBOXES, mailboxes);
-  // 注入两条种子提问，便于演示
-  const mb = mailboxes.find(m=>m.ownerId===ANON.id);
-  mb.questions.push({id:genId(), fromName:"巷口的猫#8821", fromAvatar:"🐈", content:"你好呀，想问问你最近过得还好吗？", createdAt:nowISO(), reply:null, replyPublic:false, status:"pending", comments:[]});
-  mb.questions.push({id:genId(), fromName:"未寄的信#3390", fromAvatar:"✉️", content:"如果可以对三年前的自己说句话，你会说什么？", createdAt:nowISO(), reply:null, replyPublic:false, status:"pending", comments:[]});
-  safeSet(STORE.MAILBOXES, mailboxes);
-  toast("✨ 信箱已创建");
-  renderMailbox();
+  if(!requireLogin()) return;
+  Api.post("/mailbox", {})
+    .then(()=>{ toast("✨ 信箱已创建"); loadMyMailbox(); })
+    .catch(e=>{ toast(e.detail || "创建失败，请稍后重试"); });
 }
 function copySlug(slug){
   const link = location.href.split('#')[0]+"?mb="+slug;
   if(navigator.clipboard){ navigator.clipboard.writeText(link).then(()=>toast("链接已复制")).catch(()=>toast(link)); }
   else toast(link);
 }
-function renderMbManage(mb){
-  if(!mb.questions.length) return '<div class="muted">还没有人提问，把链接分享出去吧。</div>';
-  return mb.questions.map(q=>`
-    <div class="letter" style="border-left-color:${q.status==='pending'?'var(--apricot)':'var(--sage)'}">
-      <div class="lh"><span class="nm">${q.fromAvatar} ${escapeHtml(q.fromName)} ${q.status==='pending'?'<span class="unread-dot">待回复</span>':''}</span><span class="tm">${relTime(q.createdAt)}</span></div>
+function renderMbManageBE(questions){
+  if(!questions.length) return '<div class="muted">还没有人提问，把链接分享出去吧。</div>';
+  return questions.map(q=>`
+    <div class="letter" style="border-left-color:${q.reply?'var(--sage)':'var(--apricot)'}">
+      <div class="lh"><span class="nm">${q.asker_avatar||"🌫️"} ${escapeHtml(q.asker_name)} ${q.reply?'':'<span class="unread-dot">待回复</span>'}</span><span class="tm">${relTime(q.created_at)}</span></div>
       <div class="body">${escapeHtml(q.content)}</div>
-      ${q.reply?`        <div class="muted" style="margin-top:6px;color:var(--sage-deep)">💬 你的回复：${escapeHtml(q.reply)} ${q.replyPublic?'<span class="tag">已公开</span>':''}</div>
-        ${renderComments(q, "mbqa", q.id)}`:`
-        <div class="reply-box" style="margin-top:8px">
-          <input id="reply-${q.id}" type="text" placeholder="写下你的回复…" maxlength="500" onkeydown="if(event.key==='Enter')replyQuestion('${mb.id}','${q.id}')">
-          <button class="btn btn-sm" onclick="replyQuestion('${mb.id}','${q.id}')">回复</button>
-        </div>
-        <label class="muted" style="display:flex;gap:6px;align-items:center;margin-top:6px;font-size:12px">
-          <input type="checkbox" id="pub-${q.id}"> 公开这条回复（所有人可见并可评论）</label>
-      `}
+      ${q.reply?`<div class="muted" style="margin-top:6px;color:var(--sage-deep)">💬 你的回复：${escapeHtml(q.reply)} ${q.reply_public?'<span class="tag">已公开</span>':''}</div>`
+        :`<div class="reply-box" style="margin-top:8px">
+            <input id="reply-${q.id}" type="text" placeholder="写下你的回复…" maxlength="500" onkeydown="if(event.key==='Enter')replyQuestion('${q.id}')">
+            <button class="btn btn-sm" onclick="replyQuestion('${q.id}')">回复</button>
+          </div>
+          <label class="muted" style="display:flex;gap:6px;align-items:center;margin-top:6px;font-size:12px">
+            <input type="checkbox" id="pub-${q.id}"> 公开这条回复（所有人可见并可评论）</label>`}
     </div>`).join("");
 }
-function replyQuestion(mbId, qId){
-  const inp=document.getElementById("reply-"+qId); const text=inp.value.trim(); if(!text) return;
-  const pub=document.getElementById("pub-"+qId).checked;
-  const mailboxes=getMailboxes(); const mb=mailboxes.find(m=>m.id===mbId); if(!mb) return;
-  const q=mb.questions.find(x=>x.id===qId); if(!q) return;
-  q.reply=text; q.replyPublic=pub; q.status="answered";
-  safeSet(STORE.MAILBOXES, mailboxes);
-  toast(pub?"已公开回复":"已回复（仅你可见）");
-  renderMailbox();
+function replyQuestion(qId){
+  const inp=document.getElementById("reply-"+qId); if(!inp) return;
+  const text=inp.value.trim(); if(!text){ toast("写点什么再回复"); return; }
+  const pubEl=document.getElementById("pub-"+qId);
+  const pub=pubEl?pubEl.checked:false;
+  Api.put("/mailbox/questions/"+qId, { reply:text, reply_public:pub })
+    .then(r=>{ toast(r.reply_public?"已公开回复":"已回复（仅你可见）"); loadMyMailbox(); })
+    .catch(e=>{ toast(e.detail || "回复失败，请稍后重试"); });
 }
 function visitorAsk(){
   const to=document.getElementById("ask-to").value.trim();
   const body=document.getElementById("ask-body").value.trim();
   if(!body){ toast("写点什么再发送吧"); return; }
-  const mailboxes=getMailboxes();
-  let mb = to ? mailboxes.find(m=>m.slug===to) : mailboxes[Math.floor(Math.random()*mailboxes.length)];
-  if(!mb){ // 没有目标，作为公共板留言处理
+  if(!to){
+    // 无目标信箱，作为公共板留言
     sendPublicPost({title:"", body, mood:DRAFT.mood, paper:DRAFT.paper, mode:"mailbox", tags:[]});
     return;
   }
-  // 匿名访客身份
-  const vname = ADJ[Math.floor(Math.random()*ADJ.length)]+NOUN[Math.floor(Math.random()*NOUN.length)]+"#"+Math.floor(1000+Math.random()*9000);
-  const vavatar = AVATARS[Math.floor(Math.random()*AVATARS.length)];
-  mb.questions.push({id:genId(), fromName:vname, fromAvatar:vavatar, content:body, createdAt:nowISO(), reply:null, replyPublic:false, status:"pending", comments:[]});
-  safeSet(STORE.MAILBOXES, mailboxes);
-  toast("📮 匿名留言已送达信箱");
-  renderMailbox();
+  Api.post("/mailbox/"+encodeURIComponent(to)+"/questions", { content:body })
+    .then(()=>{
+      toast("📮 匿名留言已送达信箱");
+      const ab=document.getElementById("ask-body"); if(ab) ab.value="";
+      if(Api.isLoggedIn()) loadMyMailbox();
+    })
+    .catch(e=>{
+      if(e.detail && /不存在/.test(e.detail)) toast("该信箱不存在，请检查链接");
+      else toast(e.detail || "发送失败，请稍后重试");
+    });
 }
 
 /* =====================================================================
@@ -1156,10 +1163,6 @@ function findEntity(type, id){
   if(type==="tree") return getTreehole().find(t=>t.id===id);
   if(type==="bottle") return getBottles().find(b=>b.id===id);
   if(type==="post") return getPosts().find(p=>p.id===id);
-  if(type==="mbqa"){
-    const mb=getMailboxes().find(m=>m.questions.some(q=>q.id===id));
-    return mb?mb.questions.find(q=>q.id===id):null;
-  }
   return null;
 }
 function findComment(list, cid){
@@ -1209,7 +1212,6 @@ function persistEntity(type, id, entity){
   if(type==="tree"){ let l=getTreehole(); l=l.map(t=>t.id===id?entity:t); safeSet(STORE.TREEHOLE,l); }
   else if(type==="bottle"){ let b=getBottles(); b=b.map(x=>x.id===id?entity:x); safeSet(STORE.BOTTLES,b); }
   else if(type==="post"){ let p=getPosts(); p=p.map(x=>x.id===id?entity:x); safeSet(STORE.POSTS,p); }
-  else if(type==="mbqa"){ const mbs=getMailboxes(); mbs.forEach(m=>m.questions=m.questions.map(q=>q.id===id?entity:q)); safeSet(STORE.MAILBOXES,mbs); }
 }
 function rerenderComments(type, id){
   // 重新渲染该实体的评论区
@@ -1232,6 +1234,11 @@ function requireLogin(){
   const base = (typeof navBase==="function") ? navBase() : "";
   setTimeout(()=>{ location.href = base + "auth.html?next=" + encodeURIComponent(location.pathname + location.search); }, 900);
   return false;
+}
+// 跳转登录页（带 next 回跳）
+function goLogin(){
+  const base = (typeof navBase==="function") ? navBase() : "";
+  location.href = base + "auth.html?next=" + encodeURIComponent(location.pathname + location.search);
 }
 // 根据显示模式取展示名 / 头像
 function beName(item){
@@ -1329,16 +1336,17 @@ async function refreshComments(postId){
     if(holder) holder.outerHTML = commentsHtmlBE({ id:postId, replies:data.replies });
   }catch(e){ /* 静默：列表已在别处展示 */ }
 }
-// 加载某个板块（迷树洞 / 公共板）并渲染
+// 加载某个板块（迷树洞 / 公共板 / 信箱公开回复）并渲染
 async function loadBoard(kind){
-  const wrap = kind==="treehole" ? document.getElementById("tree-letters") : document.getElementById("post-list");
+  const wrapId = kind==="treehole" ? "tree-letters" : (kind==="mailbox" ? "mb-public" : "post-list");
+  const wrap = document.getElementById(wrapId);
   if(!wrap) return;
   wrap.innerHTML = '<div class="muted" style="padding:18px;text-align:center;opacity:.7">正在加载…</div>';
   try{
     const data = await Api.get(`/treehole/posts?kind=${kind}&limit=50`);
     const items = data.items || [];
     if(kind==="treehole"){ BE_TREE = items; renderTreeLetters(items); }
-    else { BE_PUBLIC = items; renderPublicPosts(items); }
+    else { BE_PUBLIC = items; renderPublicPosts(items, wrapId); }
   }catch(e){
     wrap.innerHTML = `<div class="muted" style="padding:18px;text-align:center">加载失败：${escapeHtml(e.detail || "请稍后重试")}</div>`;
   }
@@ -1462,9 +1470,6 @@ function openByDeepLink(id){
     setTimeout(()=>toast("已为你定位到相关内容"), 120);
     return true;
   }
-  // 信箱问答
-  const mb=getMailboxes().find(m=>m.questions.some(q=>q.id===id));
-  if(mb){ goView("mailbox"); setTimeout(()=>toast("已为你定位到信箱问答"), 120); return true; }
   return false;
 }
 
