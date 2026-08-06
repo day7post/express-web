@@ -1,7 +1,6 @@
 // ===== API 地址单点配置 =====
-// 线上：Cloudflare Tunnel 免费 HTTPS 隧道（后端在本机运行）
-// 注意：隧道地址重启后会变，需要同步更新这里并重新推送
-const API_BASE = "https://javascript-working-crm-respondent.trycloudflare.com/api";
+// 线上：Cloudflare Workers 免费后端（永久在线，不依赖本机）
+const API_BASE = "https://yuzhi-api.yuzhi-app.workers.dev/api";
 
 // 站点显示名（定名后替换）
 const SITE_NAME = "语滞";
