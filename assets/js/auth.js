@@ -38,7 +38,8 @@ function renderNav() {
 
 function requireLogin() {
   if (!Api.isLoggedIn()) {
-    location.href = "auth.html?next=" + encodeURIComponent(location.pathname + location.search);
+    const base = navBase(); // 子目录页面需用 ../ 回到根目录的 auth.html，否则会 404
+    location.href = base + "auth.html?next=" + encodeURIComponent(location.pathname + location.search);
     return false;
   }
   return true;
@@ -46,7 +47,7 @@ function requireLogin() {
 
 function logout() {
   Api.clearAuth();
-  location.href = "index.html";
+  location.href = navBase() + "index.html";
 }
 
 // 通用错误提示

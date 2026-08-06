@@ -31,9 +31,10 @@ const Api = {
     }
 
     if (resp.status === 401) {
-      // 未登录或 token 过期
+      // 未登录或 token 过期：子目录页面需用 ../ 回到根目录的 auth.html，否则会 404
       if (!location.pathname.endsWith("auth.html")) {
-        location.href = "auth.html?next=" + encodeURIComponent(location.pathname + location.search);
+        const base = (typeof navBase === "function") ? navBase() : "";
+        location.href = base + "auth.html?next=" + encodeURIComponent(location.pathname + location.search);
       }
       throw { status: 401, detail: "请先登录" };
     }
