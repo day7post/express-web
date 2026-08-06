@@ -3,7 +3,7 @@ document.addEventListener("DOMContentLoaded", () => {
   renderNav();
 });
 
-// 根据当前页面深度生成相对前缀，保证子目录页面（journal/ treehole/ create/ tests/）顶部导航也能正确跳转
+// 根据当前页面深度生成相对前缀，保证子目录页面（journal/ treehole/ create/）顶部导航也能正确跳转
 function navBase() {
   const segs = location.pathname.split("/").filter(Boolean);
   segs.pop(); // 去掉文件名
@@ -21,9 +21,8 @@ function renderNav() {
   const links = [
     '<a href="' + base + 'index.html">首页</a>',
     '<a href="' + base + 'journal/list.html">日记</a>',
-    '<a href="' + base + 'drift/index.html">信箱</a>',
+    '<a href="' + base + 'treehole/feed.html">信箱</a>',
     '<a href="' + base + 'create/hub.html">创作</a>',
-    '<a href="' + base + 'tests/hub.html">心理测试</a>',
     '<a href="' + base + 'safety.html">心理资源</a>',
   ];
 

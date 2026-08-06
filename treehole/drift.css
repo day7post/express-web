@@ -1,0 +1,302 @@
+/* =====================================================================
+   拾光信箱 · 心灵漂流 —— 模块专属样式（作用域限定于 #drift-root）
+   仅包含项目 theme.css / common.css 未覆盖的飘浮背景、模式卡片、
+   信件、对话、评论楼中楼、岛屿、树洞、全屏动画与 Toast。
+   通用按钮/卡片/表单复用 theme.css。
+   ===================================================================== */
+
+/* 模块根容器：在共享顶部导航之下，承载全部漂流内容 */
+#drift-root {
+  position: relative;
+  z-index: 2;
+  overflow-x: hidden;
+  padding-bottom: 92px; /* 给底部模式导航留出空间 */
+  max-width: 680px;
+  margin: 0 auto;
+}
+
+
+
+
+:root{
+  
+  --cream:#faf6ef;
+  --cream-2:#f3ece0;
+  --surface:#fffdf9;
+  --sage:#6fae93;
+  --sage-deep:#3f7e66;
+  --sage-soft:#e1f0e8;
+  --apricot:#f3c89b;
+  --apricot-deep:#e0a86a;
+  --sky:#9ec7d8;
+  --sky-soft:#e3f0f5;
+  --rose:#e89aa6;
+  --rose-soft:#f9e6ea;
+  --ink:#3a4a42;
+  --ink-soft:#62746b;
+  --ink-faint:#9aa8a0;
+  --line:#e6ddcb;
+  --shadow:0 4px 18px rgba(90,120,105,.14);
+  --shadow-lg:0 12px 40px rgba(90,120,105,.22);
+  --radius:22px;
+  --radius-sm:14px;
+  --font:"Yuanti SC","圆体-简","PingFang SC","Hiragino Sans GB","Microsoft YaHei","Noto Sans SC",system-ui,sans-serif;
+}
+
+#drift-root *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+#drift-root html,
+  #drift-root body{height:100%}
+#drift-root body{
+  font-family:var(--font);
+  color:var(--ink);
+  background:linear-gradient(160deg,#fbf7ef 0%,#f3efe4 40%,#eaf3ec 100%);
+  line-height:1.7;
+  overflow-x:hidden;
+  position:relative;
+  padding-bottom:84px; 
+}
+#drift-root a{color:var(--sage-deep);text-decoration:none}
+#drift-root h1,
+  #drift-root h2,
+  #drift-root h3,
+  #drift-root h4{font-weight:600;line-height:1.4}
+#drift-root button{font-family:inherit;cursor:pointer}
+
+
+#drift-root .sky{position:fixed;inset:0;pointer-events:none;z-index:0;overflow:hidden}
+#drift-root .float-item{position:absolute;opacity:.5;filter:blur(.2px);animation:drift linear infinite}
+@keyframes drift{
+  0%{transform:translate(0,0) rotate(0deg)}
+  100%{transform:translate(var(--dx,40px),-120vh) rotate(220deg)}
+}
+#drift-root .wave{position:fixed;left:0;right:0;bottom:-10px;height:160px;z-index:0;pointer-events:none;opacity:.5;
+  background:radial-gradient(120% 100% at 50% 100%, rgba(158,199,216,.35), transparent 70%);
+  animation:waveMove 9s ease-in-out infinite alternate}
+@keyframes waveMove{from{transform:translateY(8px) scaleY(1)}to{transform:translateY(-6px) scaleY(1.06)}}
+
+
+#drift-root .topbar{position:sticky;top:0;z-index:50;background:rgba(255,253,249,.86);backdrop-filter:blur(10px);
+  border-bottom:1px solid var(--line);padding:12px 18px;display:flex;align-items:center;justify-content:space-between}
+#drift-root .brand{display:flex;flex-direction:column;line-height:1.1}
+#drift-root .brand b{font-size:18px;color:var(--sage-deep);letter-spacing:1px}
+#drift-root .brand small{font-size:11px;color:var(--ink-faint)}
+#drift-root .identity{display:flex;align-items:center;gap:8px;background:var(--sage-soft);border-radius:30px;padding:5px 12px 5px 6px}
+#drift-root .avatar{width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:16px;
+  background:linear-gradient(135deg,#fff,#eef6f0);box-shadow:inset 0 0 0 2px #fff,var(--shadow)}
+#drift-root .identity .nm{font-size:12px;color:var(--sage-deep);font-weight:600;max-width:110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+
+#drift-root #app{position:relative;z-index:2;max-width:680px;margin:0 auto;padding:18px 16px 24px}
+#drift-root .view{animation:fadeUp .45s ease both}
+@keyframes fadeUp{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+
+
+#drift-root .hero{text-align:center;padding:14px 10px 8px}
+#drift-root .hero h1{font-size:25px;color:var(--sage-deep);letter-spacing:1px}
+#drift-root .hero p{font-size:13.5px;color:var(--ink-soft);margin-top:6px;padding:0 6px}
+
+
+#drift-root .modes{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:18px}
+#drift-root .mode-card{position:relative;background:var(--surface);border-radius:var(--radius);padding:18px 16px;box-shadow:var(--shadow);
+  cursor:pointer;transition:transform .25s cubic-bezier(.34,1.56,.64,1),box-shadow .25s;overflow:hidden;border:1px solid #fff}
+#drift-root .mode-card:active{transform:scale(.96)}
+#drift-root .mode-card:hover{transform:translateY(-4px);box-shadow:var(--shadow-lg)}
+#drift-root .mode-card .art{font-size:40px;height:56px;display:flex;align-items:center;justify-content:center;
+  filter:drop-shadow(0 4px 6px rgba(0,0,0,.08))}
+#drift-root .mode-card h3{font-size:16px;color:var(--ink);margin:4px 0 4px}
+#drift-root .mode-card p{font-size:12px;color:var(--ink-soft);line-height:1.55}
+#drift-root .mode-card .glow{position:absolute;right:-30px;bottom:-30px;width:90px;height:90px;border-radius:50%;opacity:.35;filter:blur(8px)}
+#drift-root .mode-card.dandelion .glow{background:var(--apricot)}
+#drift-root .mode-card.island .glow{background:var(--sky)}
+#drift-root .mode-card.treehole .glow{background:var(--sage)}
+#drift-root .mode-card.mailbox .glow{background:var(--rose)}
+#drift-root .badge{position:absolute;top:10px;right:10px;min-width:22px;height:22px;padding:0 6px;border-radius:12px;background:var(--rose);
+  color:#fff;font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(232,154,166,.6);
+  animation:pop .4s cubic-bezier(.34,1.56,.64,1) both}
+@keyframes pop{from{transform:scale(0)}to{transform:scale(1)}}
+
+
+#drift-root .card{background:var(--surface);border-radius:var(--radius);padding:18px;box-shadow:var(--shadow);margin-bottom:14px;border:1px solid #fff}
+#drift-root .card h3.ct{font-size:16px;margin-bottom:10px;color:var(--sage-deep)}
+#drift-root .btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;border:none;border-radius:var(--radius-sm);
+  padding:11px 18px;font-size:14px;font-weight:600;background:var(--sage);color:#fff;box-shadow:0 3px 10px rgba(111,174,147,.45);
+  transition:transform .15s,background .2s,box-shadow .2s;cursor:pointer}
+#drift-root .btn:active{transform:translateY(1px) scale(.98)}
+#drift-root .btn:hover{background:var(--sage-deep)}
+#drift-root .btn-soft{background:var(--sage-soft);color:var(--sage-deep);box-shadow:none}
+#drift-root .btn-soft:hover{background:var(--sage);color:#fff}
+#drift-root .btn-apricot{background:var(--apricot);box-shadow:0 3px 10px rgba(243,200,155,.5);color:#6b4a23}
+#drift-root .btn-apricot:hover{background:var(--apricot-deep);color:#fff}
+#drift-root .btn-ghost{background:transparent;color:var(--ink-soft);box-shadow:none;border:1.5px solid var(--line)}
+#drift-root .btn-ghost:hover{background:var(--cream-2);color:var(--ink)}
+#drift-root .btn-block{width:100%}
+#drift-root .btn-sm{padding:7px 13px;font-size:13px}
+#drift-root .btn[disabled]{opacity:.45;pointer-events:none}
+
+
+#drift-root .field{margin-bottom:14px}
+#drift-root .field label{display:block;font-size:13px;color:var(--ink-soft);margin-bottom:7px;font-weight:600}
+#drift-root .field textarea,
+  #drift-root .field input[type=text]{width:100%;padding:12px 14px;border:1.5px solid var(--line);border-radius:var(--radius-sm);
+  font-family:inherit;font-size:14px;background:var(--surface);color:var(--ink);resize:vertical;transition:border .2s}
+#drift-root .field textarea{min-height:120px}
+#drift-root .field textarea:focus,
+  #drift-root .field input:focus{outline:none;border-color:var(--sage)}
+#drift-root .hint{font-size:12px;color:var(--ink-faint);margin-top:5px;text-align:right}
+#drift-root .chips{display:flex;flex-wrap:wrap;gap:8px}
+#drift-root .chip{border:1.5px solid var(--line);background:var(--surface);border-radius:30px;padding:7px 14px;font-size:13px;cursor:pointer;
+  transition:all .18s;user-select:none}
+#drift-root .chip:active{transform:scale(.94)}
+#drift-root .chip.on{background:var(--sage);color:#fff;border-color:var(--sage);box-shadow:0 2px 8px rgba(111,174,147,.4)}
+#drift-root .papers{display:flex;gap:10px;flex-wrap:wrap}
+#drift-root .paper{width:46px;height:58px;border-radius:10px;border:2px solid transparent;cursor:pointer;box-shadow:var(--shadow);transition:transform .15s,border .15s}
+#drift-root .paper:active{transform:scale(.92)}
+#drift-root .paper.on{border-color:var(--sage-deep);transform:translateY(-3px)}
+
+
+#drift-root .fab{position:fixed;left:50%;bottom:64px;transform:translateX(-50%);z-index:60;width:62px;height:62px;border-radius:50%;
+  background:linear-gradient(135deg,var(--sage),var(--sage-deep));color:#fff;font-size:26px;border:none;box-shadow:var(--shadow-lg);
+  display:flex;align-items:center;justify-content:center;animation:bob 2.6s ease-in-out infinite}
+@keyframes bob{0%,100%{transform:translateX(-50%) translateY(0)}50%{transform:translateX(-50%) translateY(-7px)}}
+#drift-root .fab:active{transform:translateX(-50%) scale(.92)}
+
+
+#drift-root .tabbar{position:fixed;left:0;right:0;bottom:0;z-index:55;background:rgba(255,253,249,.94);backdrop-filter:blur(10px);
+  border-top:1px solid var(--line);display:flex;justify-content:space-around;padding:8px 4px;max-width:680px;margin:0 auto}
+#drift-root .tab{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;color:var(--ink-faint);font-size:11px;background:none;border:none;padding:4px}
+#drift-root .tab .ic{font-size:20px;transition:transform .2s}
+#drift-root .tab.on{color:var(--sage-deep)}
+#drift-root .tab.on .ic{transform:translateY(-2px) scale(1.12)}
+
+
+#drift-root .modal{position:fixed;inset:0;z-index:80;background:rgba(58,74,66,.42);backdrop-filter:blur(3px);display:none;
+  align-items:flex-end;justify-content:center;animation:fade .25s}
+#drift-root .modal.show{display:flex}
+@keyframes fade{from{opacity:0}to{opacity:1}}
+#drift-root .sheet{background:var(--cream);width:100%;max-width:680px;border-radius:26px 26px 0 0;padding:20px 18px 26px;max-height:92vh;overflow-y:auto;
+  animation:slideUp .35s cubic-bezier(.2,.8,.2,1) both;box-shadow:var(--shadow-lg)}
+@keyframes slideUp{from{transform:translateY(100%)}to{transform:none}}
+#drift-root .sheet-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px}
+#drift-root .sheet-head h2{font-size:18px;color:var(--sage-deep)}
+#drift-root .x{border:none;background:var(--cream-2);width:32px;height:32px;border-radius:50%;font-size:18px;color:var(--ink-soft)}
+#drift-root .mode-tabs{display:flex;gap:8px;margin-bottom:16px;overflow-x:auto;padding-bottom:4px}
+#drift-root .mode-tab{flex:0 0 auto;border:1.5px solid var(--line);background:var(--surface);border-radius:30px;padding:8px 14px;font-size:13px;
+  white-space:nowrap;cursor:pointer;transition:all .18s}
+#drift-root .mode-tab.on{background:var(--sage);color:#fff;border-color:var(--sage)}
+
+
+#drift-root .letter{background:var(--surface);border-radius:var(--radius);padding:16px;box-shadow:var(--shadow);margin-bottom:12px;position:relative;
+  border-left:5px solid var(--sage);animation:fadeUp .4s both}
+#drift-root .letter .lh{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
+#drift-root .letter .nm{font-size:13px;font-weight:600;color:var(--sage-deep);display:flex;align-items:center;gap:7px}
+#drift-root .letter .tm{font-size:11px;color:var(--ink-faint)}
+#drift-root .letter .title{font-size:15px;font-weight:600;margin:6px 0 4px;color:var(--ink)}
+#drift-root .letter .body{font-size:14px;color:var(--ink-soft);white-space:pre-wrap;word-break:break-word;max-height:84px;overflow:hidden;transition:max-height .4s}
+#drift-root .letter.open .body{max-height:1200px}
+#drift-root .letter .more{font-size:12px;color:var(--sage-deep);margin-top:4px;font-weight:600}
+#drift-root .tag{display:inline-block;background:var(--sage-soft);color:var(--sage-deep);border-radius:20px;padding:2px 10px;font-size:11px;margin:2px 4px 2px 0}
+#drift-root .tag.m{background:var(--apricot);color:#6b4a23}
+#drift-root .taglist{margin:6px 0}
+
+
+#drift-root .conv{display:flex;gap:10px;margin-bottom:12px;align-items:flex-start}
+#drift-root .conv.me{flex-direction:row-reverse}
+#drift-root .bubble{max-width:74%;padding:10px 14px;border-radius:18px;font-size:14px;line-height:1.6;white-space:pre-wrap;word-break:break-word;
+  box-shadow:var(--shadow);animation:pop .3s both}
+#drift-root .conv.them .bubble{background:var(--surface);border-bottom-left-radius:5px}
+#drift-root .conv.me .bubble{background:var(--sage);color:#fff;border-bottom-right-radius:5px}
+#drift-root .chatbox{display:flex;flex-direction:column;gap:2px}
+#drift-root .chat-input{display:flex;gap:8px;margin-top:10px}
+#drift-root .chat-input input{flex:1;padding:11px 14px;border:1.5px solid var(--line);border-radius:30px;font-family:inherit;font-size:14px}
+#drift-root .chat-input input:focus{outline:none;border-color:var(--sage)}
+
+
+#drift-root .comments{margin-top:12px;border-top:1px dashed var(--line);padding-top:12px}
+#drift-root .cmt{display:flex;gap:9px;margin-bottom:12px}
+#drift-root .cmt .ca{width:30px;height:30px;border-radius:50%;flex:0 0 auto;display:flex;align-items:center;justify-content:center;font-size:15px;
+  background:var(--sage-soft)}
+#drift-root .cmt .cb{flex:1;min-width:0}
+#drift-root .cmt .cmeta{font-size:12px;color:var(--ink-faint);display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+#drift-root .cmt .cname{color:var(--sage-deep);font-weight:600}
+#drift-root .cmt .cemoji{font-size:14px}
+#drift-root .cmt .ctext{font-size:14px;color:var(--ink-soft);white-space:pre-wrap;word-break:break-word;margin:2px 0}
+#drift-root .cmt .cact{display:flex;gap:14px;font-size:12px;color:var(--ink-faint);margin-top:2px}
+#drift-root .cmt .cact span{cursor:pointer;user-select:none;transition:color .15s}
+#drift-root .cmt .cact span:hover{color:var(--sage-deep)}
+#drift-root .cmt .like.on{color:var(--rose)}
+#drift-root .replies{margin-top:10px;padding-left:12px;border-left:2px solid var(--line)}
+#drift-root .reply-box{margin-top:8px;display:flex;gap:6px}
+#drift-root .reply-box input{flex:1;padding:8px 12px;border:1.5px solid var(--line);border-radius:20px;font-family:inherit;font-size:13px}
+#drift-root .reply-box input:focus{outline:none;border-color:var(--sage)}
+#drift-root .emoji-pick{display:flex;gap:6px;flex-wrap:wrap;margin:6px 0}
+#drift-root .emoji-pick span{font-size:18px;cursor:pointer;filter:grayscale(.4);transition:transform .12s}
+#drift-root .emoji-pick span.on{transform:scale(1.3);filter:none}
+#drift-root .emoji-pick span:active{transform:scale(.9)}
+
+
+#drift-root .island-card{background:linear-gradient(160deg,#eaf4f7,#dceef2);border-radius:var(--radius);padding:20px;box-shadow:var(--shadow);margin-bottom:14px;text-align:center}
+#drift-root .island-shape{width:120px;height:120px;border-radius:50% 50% 46% 46%;margin:0 auto 10px;display:flex;align-items:center;justify-content:center;font-size:46px;
+  box-shadow:inset 0 -10px 20px rgba(0,0,0,.08),var(--shadow);position:relative}
+#drift-root .island-shape::after{content:"";position:absolute;inset:-6px;border-radius:inherit;border:3px solid rgba(255,255,255,.5)}
+#drift-root .theme-贝壳沙滩{background:linear-gradient(160deg,#ffe9cf,#ffd9a8)}
+#drift-root .theme-月光海岸{background:linear-gradient(160deg,#dfe7f7,#c7d6f0)}
+#drift-root .theme-秘密花园{background:linear-gradient(160deg,#e3f3df,#c9ecc2)}
+#drift-root .theme-星河孤岛{background:linear-gradient(160deg,#e7def7,#d3c2ee)}
+#drift-root .theme-pick{display:flex;gap:10px;flex-wrap:wrap;justify-content:center}
+#drift-root .theme-opt{cursor:pointer;text-align:center;font-size:12px;color:var(--ink-soft);transition:transform .15s}
+#drift-root .theme-opt .sw{width:54px;height:54px;border-radius:16px;display:flex;align-items:center;justify-content:center;font-size:26px;margin-bottom:4px;box-shadow:var(--shadow)}
+#drift-root .theme-opt.on .sw{border:3px solid var(--sage-deep);transform:translateY(-3px)}
+
+
+#drift-root .treehole-stage{position:relative;background:radial-gradient(circle at 50% 30%,#2c4a3f,#16271f);border-radius:var(--radius);
+  padding:24px 16px 28px;min-height:280px;overflow:hidden;box-shadow:var(--shadow);text-align:center;color:#e8f3ec}
+#drift-root .tree-hole{width:130px;height:130px;border-radius:50%;margin:8px auto 14px;background:radial-gradient(circle at 50% 45%,#ffe9a8,#caa24a 60%,#5a4520);
+  box-shadow:0 0 40px 10px rgba(255,220,140,.45);animation:pulse 3s ease-in-out infinite;position:relative}
+@keyframes pulse{0%,100%{box-shadow:0 0 30px 6px rgba(255,220,140,.35)}50%{box-shadow:0 0 55px 16px rgba(255,220,140,.6)}}
+#drift-root .tree-hole::before{content:"";position:absolute;inset:18px;border-radius:50%;background:radial-gradient(circle,#1c1208,#3a2a12)}
+#drift-root .dig-btn{margin-top:6px}
+#drift-root .firefly{position:absolute;width:7px;height:7px;border-radius:50%;background:rgba(255,240,170,.95);box-shadow:0 0 10px 4px rgba(255,235,150,.8);
+  animation:ff 6s ease-in-out infinite}
+@keyframes ff{0%,100%{transform:translate(0,0);opacity:.4}50%{transform:translate(var(--fx,20px),var(--fy,-30px));opacity:1}}
+#drift-root .trees{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px}
+
+
+#drift-root #fx{position:fixed;inset:0;z-index:200;pointer-events:none;display:none}
+#drift-root #fx.show{display:block}
+#drift-root .seed{position:absolute;width:10px;height:10px;border-radius:50% 50% 50% 0;background:#fff;box-shadow:0 0 6px rgba(255,255,255,.7);
+  transform:rotate(45deg);animation:seedFly linear forwards}
+@keyframes seedFly{0%{opacity:0;transform:translate(0,0) rotate(45deg) scale(.4)}
+  15%{opacity:1}100%{opacity:.9;transform:translate(var(--sx),var(--sy)) rotate(405deg) scale(1)}}
+#drift-root .island-fly{position:absolute;top:50%;width:130px;height:130px;border-radius:50% 50% 46% 46%;display:flex;align-items:center;justify-content:center;font-size:50px;
+  box-shadow:inset 0 -10px 20px rgba(0,0,0,.1),var(--shadow);transition:left 2.4s cubic-bezier(.5,0,.2,1),right 2.4s cubic-bezier(.5,0,.2,1)}
+#drift-root .collision-glow{position:absolute;left:50%;top:50%;width:10px;height:10px;border-radius:50%;transform:translate(-50%,-50%);
+  background:radial-gradient(circle,#fff,rgba(255,230,160,.6) 40%,transparent 70%);opacity:0}
+#drift-root .collision-glow.go{animation:glow .9s ease-out forwards}
+@keyframes glow{0%{opacity:0;width:10px;height:10px}40%{opacity:1}100%{opacity:0;width:520px;height:520px}}
+#drift-root .particle{position:absolute;left:50%;top:50%;width:8px;height:8px;border-radius:50%;opacity:0}
+#drift-root .particle.go{animation:part .9s ease-out forwards}
+@keyframes part{0%{opacity:1;transform:translate(-50%,-50%) scale(1)}100%{opacity:0;transform:translate(calc(-50% + var(--px)),calc(-50% + var(--py))) scale(.3)}}
+#drift-root .seed-hand{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);text-align:center;animation:handIn .6s cubic-bezier(.34,1.56,.64,1) both}
+@keyframes handIn{from{opacity:0;transform:translate(-50%,-30%) scale(.6)}to{opacity:1;transform:translate(-50%,-50%) scale(1)}}
+#drift-root .seed-hand .s{font-size:60px;display:inline-block;animation:drop 1.4s ease-in-out infinite}
+@keyframes drop{0%,100%{transform:translateY(0)}50%{transform:translateY(10px)}}
+
+
+#drift-root #toast{position:fixed;left:50%;bottom:96px;transform:translateX(-50%);z-index:300;display:flex;flex-direction:column;gap:8px;align-items:center;pointer-events:none}
+#drift-root .toast{background:rgba(58,74,66,.92);color:#fff;padding:10px 18px;border-radius:30px;font-size:13px;box-shadow:var(--shadow-lg);
+  animation:toastIn .3s both,toastOut .3s 2.7s forwards;max-width:90vw}
+@keyframes toastIn{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
+@keyframes toastOut{to{opacity:0;transform:translateY(-8px)}}
+
+
+#drift-root .empty{text-align:center;padding:46px 20px;color:var(--ink-soft)}
+#drift-root .empty .em{font-size:46px;margin-bottom:10px}
+#drift-root .disclaimer{background:var(--rose-soft);border:1px solid #f0cdd3;border-radius:var(--radius-sm);padding:14px;font-size:12.5px;color:#a45a64;margin-top:18px;line-height:1.6}
+#drift-root .disclaimer b{color:#c0392b}
+#drift-root .section-title{font-size:17px;color:var(--sage-deep);margin:18px 4px 10px;display:flex;align-items:center;gap:8px}
+#drift-root .muted{color:var(--ink-faint);font-size:12px}
+#drift-root .row{display:flex;gap:10px;flex-wrap:wrap}
+#drift-root .spread{display:flex;justify-content:space-between;align-items:center;gap:10px}
+#drift-root .unread-dot{display:inline-flex;min-width:18px;height:18px;padding:0 5px;border-radius:9px;background:var(--rose);color:#fff;font-size:11px;align-items:center;justify-content:center;font-weight:700}
+#drift-root .link-back{font-size:13px;color:var(--sage-deep);font-weight:600;cursor:pointer}
+#drift-root .slug-box{background:var(--cream-2);border:1px dashed var(--line);border-radius:var(--radius-sm);padding:10px 12px;font-size:12px;color:var(--ink-soft);word-break:break-all;margin-top:6px}
